@@ -107,6 +107,29 @@ class _PlannerState extends State<Planner> {
     if (mounted) setState(() {});
   }
 
+  Future<void> deleteSelectedPlot() async {
+    if (selected == null) return;
+    final target = layout;
+    final index = selected!;
+    final removed = plots.removeAt(index);
+    selected = null;
+    await save();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Deleted ${removed['crop']} plot.'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () {
+            final entries = target['plots'] as List;
+            entries.insert(index.clamp(0, entries.length), removed);
+            save();
+          },
+        ),
+      ),
+    );
+  }
+
   void message(String text) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
@@ -305,8 +328,8 @@ class _PlannerState extends State<Planner> {
                     decoration: const InputDecoration(labelText: 'Crop'),
                   ),
                   TextField(
-                    decoration: const InputDecoration(
-                      labelText: 'Search plantable ingredients',
+                    decoration: InputDecoration(
+                      labelText: 'Search ${crops.length} plantable crops',
                       prefixIcon: Icon(Icons.search),
                     ),
                     onChanged: (v) => update(() => query = v),
@@ -604,17 +627,6 @@ class _PlannerState extends State<Planner> {
                 avatar: Icon(Icons.water_drop, size: 18),
                 label: Text('1 well · drag to move'),
               ),
-              if (selected != null) ...[
-                TextButton(onPressed: edit, child: const Text('Edit / resize')),
-                TextButton(
-                  onPressed: () {
-                    plots.removeAt(selected!);
-                    selected = null;
-                    save();
-                  },
-                  child: const Text('Delete plot'),
-                ),
-              ],
             ],
           ),
         ),
@@ -624,6 +636,35 @@ class _PlannerState extends State<Planner> {
             '$w × $h planting cells · ${w * 2} × ${h * 2} placement units · ${layout['blocked'].length} blocked cells\n${layout['template']} · ${layout['calibrated'] == true ? 'Bounds configured' : 'Legacy / unverified bounds: configure map'} · Drag plots / wells. ${blockMode ? 'Tap a cell to toggle blocked terrain.' : 'Pinch / scroll to zoom.'}',
             style: const TextStyle(fontSize: 12),
           ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          child: selected == null
+              ? const Text(
+                  'Tap a crop plot to select it, then edit or delete it.',
+                  style: TextStyle(fontSize: 12),
+                )
+              : Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      'Selected: ${plots[selected!]['crop']}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    FilledButton.tonalIcon(
+                      onPressed: edit,
+                      icon: const Icon(Icons.edit, size: 18),
+                      label: const Text('Edit crop'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: deleteSelectedPlot,
+                      icon: const Icon(Icons.delete_outline, size: 18),
+                      label: const Text('Delete crop'),
+                    ),
+                  ],
+                ),
         ),
         Expanded(
           child: InteractiveViewer(

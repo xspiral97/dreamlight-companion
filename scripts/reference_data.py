@@ -33,7 +33,7 @@ def recipe_data(doc):
             parts=re.split(r'<br\s*/?>',str(cells[heads.index('ingredients')]),flags=re.I)
             ingredients=[text(BeautifulSoup(part,'html.parser')) for part in parts];ingredients=[p for p in ingredients if p]
             name_cell=cells[heads.index('name')]
-            value={'ingredients':ingredients,'stars':text(cells[heads.index('stars')]).count('★')}
+            value={'ingredients':ingredients,'stars':text(cells[heads.index('stars')]).count('★'),'category':text(cells[heads.index('type')]) if 'type' in heads else 'Unknown'}
             result[linked_name(name_cell)]=value
             result.setdefault(text(name_cell),value)
     return result

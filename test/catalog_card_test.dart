@@ -85,6 +85,9 @@ void main() {
       }
       if (section == 'Companions') {
         expect(find.text('Available now'), findsOneWidget);
+        expect(find.text('Favorite: Carrot'), findsOneWidget);
+        expect(find.textContaining('Liked: Grains'), findsOneWidget);
+        expect(find.text('Base game'), findsOneWidget);
         expect(find.textContaining('Peaceful Meadow'), findsOneWidget);
       }
     });

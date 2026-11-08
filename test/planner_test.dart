@@ -83,6 +83,50 @@ void main() {
       expect(saved[0]['wells'].length, 1);
       expect(saved[0]['wells'][0]['x'], 6);
       expect(saved[0]['wells'][0]['y'], 8);
+      // Selecting a saved plot exposes explicit edit/delete actions; both persist.
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Pumpkin\n16 plants'));
+      await tester.pumpAndSettle();
+      expect(find.text('Selected: Pumpkin'), findsOneWidget);
+      await tester.tap(find.text('Edit crop'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, 'Carrot');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 100)),
+      );
+      expect(
+        (await tester.runAsync(
+          () => store.get('layouts'),
+        ))[0]['plots'][0]['crop'],
+        'Carrot',
+      );
+      await tester.tap(find.text('Delete crop'));
+      await tester.pumpAndSettle();
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 100)),
+      );
+      expect(
+        (await tester.runAsync(() => store.get('layouts')))[0]['plots'],
+        isEmpty,
+      );
+      expect(
+        (await tester.runAsync(() => store.get('layouts')))[0]['wells'].length,
+        1,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Undo'));
+      await tester.pumpAndSettle();
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 100)),
+      );
+      expect(
+        (await tester.runAsync(
+          () => store.get('layouts'),
+        ))[0]['plots'][0]['crop'],
+        'Carrot',
+      );
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
       await tester.runAsync(() => store.db.close());

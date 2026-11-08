@@ -2,6 +2,7 @@
 import argparse, datetime, email.utils, gzip, json, math, pathlib, re, time, urllib.request, urllib.parse, urllib.error
 from bs4 import BeautifulSoup
 from reference_data import enrich
+from companion_data import enrich_companions, gardening_data
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 CACHE=ROOT/'build'/'wiki-source-cache'; CACHE.mkdir(parents=True,exist_ok=True)
 LAST=0.0
@@ -39,6 +40,26 @@ def page(title):
             if wait>600:raise RuntimeError(f'Wiki cooldown is {wait}s; keep the previous published catalog')
             time.sleep(wait)
     raise RuntimeError(title)
+
+def companion_revisions(titles):
+    global LAST
+    cache=CACHE/'companion-revisions.json'
+    if cache.exists() and time.time()-cache.stat().st_mtime<21600:
+        saved=json.loads(cache.read_text(encoding='utf-8'))
+        if all(title in saved for title in titles):return saved
+    result={}
+    for offset in range(0,len(titles),40):
+        time.sleep(max(0,6-(time.monotonic()-LAST)))
+        params={'action':'query','prop':'revisions','rvprop':'content','rvslots':'main','titles':'|'.join(titles[offset:offset+40]),'format':'json'}
+        request=urllib.request.Request('https://dreamlightvalleywiki.com/api.php?'+urllib.parse.urlencode(params),headers={'User-Agent':'DreamlightCompanionData/0.5 (noncommercial wiki catalog)'})
+        LAST=time.monotonic()
+        response=json.load(urllib.request.urlopen(request,timeout=60))
+        if 'error' in response:raise ValueError(response['error'])
+        for row in response.get('query',{}).get('pages',{}).values():
+            result[row['title']]=row.get('revisions',[{}])[0].get('slots',{}).get('main',{}).get('*','')
+    if any(not result.get(title) for title in titles):raise ValueError('Incomplete companion source pages')
+    cache.write_text(json.dumps(result,ensure_ascii=False),encoding='utf-8')
+    return result
 
 def fields_of(doc):
     result={}
@@ -132,19 +153,7 @@ def build(refresh):
     if len(info)<80 or len(fish)<60:raise RuntimeError('Activity tables changed; retain the previous published feed')
     crop_list=[dict(c,image=c.get('imageSource',c['image'])) for c in json.loads((ROOT/'assets/crops.json').read_text(encoding='utf-8'))]
     if refresh:
-        crop_doc=page('Ingredients')
-        discovered=[]
-        for table in crop_doc.select('table'):
-            rows=table.select('tr');heads=[clean(h).lower() for h in rows[0].find_all('th',recursive=False)] if rows else []
-            if 'sources' not in heads or 'name' not in heads:continue
-            for row in rows[1:]:
-                cells=row.find_all('td',recursive=False)
-                if len(cells)<len(heads):continue
-                if not any(a.get('title','').endswith(' Seed') for a in cells[heads.index('sources')].select('a[title]')):continue
-                link=cells[heads.index('name')].select_one('a[title]');image=cells[0].select_one('img')
-                if link and image:discovered.append({'name':link['title'],'image':urllib.parse.urljoin('https://dreamlightvalleywiki.com',image['src']),'location':clean(cells[heads.index('location')]),'growth':clean(cells[heads.index('grow time')])})
-        if not discovered:raise RuntimeError('Ingredient table changed')
-        crop_list=discovered
+        crop_list=gardening_data(page('Gardening'))
         # Refresh at most five individual fish pages per run; all table sources plus this budget stay below the API's hourly quota.
         fish_rows=[r for r in records.values() if 'Fish' in json.loads(r['categories'])]
         fish_rows.sort(key=lambda r:json.loads(r['details']).get('fishRefreshedAt',''))
@@ -182,6 +191,8 @@ def build(refresh):
         row['details']=json.dumps(details,ensure_ascii=False)
     snapshot.update({'schemaVersion':2,'generatedAt':datetime.datetime.now(datetime.timezone.utc).isoformat(),'failures':failures,'records':list(records.values())})
     enrich(snapshot,page)
+    titles=[row['title'] for row in snapshot['records'] if 'Companions' in json.loads(row['categories']) and not json.loads(row['details']).get('companion',{}).get('scheduled')]
+    enrich_companions(snapshot,page('Critters'),companion_revisions(titles))
     text=json.dumps(snapshot,ensure_ascii=False,separators=(',',':'))
     (ROOT/'assets/catalog.json').write_text(text,encoding='utf-8');(ROOT/'data').mkdir(exist_ok=True)
     with open(ROOT/'data/catalog.json.gz','wb') as output:output.write(gzip.compress(text.encode('utf-8'),mtime=0))

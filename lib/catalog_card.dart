@@ -36,6 +36,46 @@ String companionStatus(Map<String, dynamic> data, DateTime now) {
   }
 }
 
+String companionFood(Map<String, dynamic> data, String kind) {
+  final info = data['companion'] as Map?;
+  final fields = data['fields'] as Map?;
+  return fieldText(
+    info?[kind.toLowerCase()] ??
+        fields?['$kind food:'] ??
+        fields?['$kind Food:'],
+  );
+}
+
+class CompanionSourceBadge extends StatelessWidget {
+  final Map info;
+  const CompanionSourceBadge({super.key, required this.info});
+  @override
+  Widget build(BuildContext context) {
+    final tags =
+        (info['acquisition'] as Map?)?['tags'] as List? ?? ['Unknown source'];
+    return Wrap(
+      spacing: 4,
+      runSpacing: 4,
+      children: [
+        for (final tag in tags)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: BoxDecoration(
+              color: tag.toString().contains('Premium') || tag == 'Star Path'
+                  ? const Color(0xFF66523B)
+                  : const Color(0xFF304C40),
+              borderRadius: BorderRadius.circular(5),
+            ),
+            child: Text(
+              '$tag',
+              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 String todayHours(Map<String, dynamic> data, DateTime now) =>
     ((data['companion'] as Map?)?['weekly'] as Map?)?[weekdays[now.weekday - 1]]
         ?.toString() ??
@@ -138,29 +178,59 @@ class CatalogCard extends StatelessWidget {
                 const SizedBox(height: 3),
                 Expanded(child: line('Zone', fish?['locations'], lines: 3)),
               ] else if (section == 'Companions') ...[
-                Text(
-                  companionStatus(data, now),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: state == CompanionAvailability.available
-                        ? const Color(0xFF98CFAD)
-                        : Colors.white54,
+                CompanionSourceBadge(info: companion ?? {}),
+                const SizedBox(height: 5),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (companion?['scheduled'] == true) ...[
+                          Text(
+                            companionStatus(data, now),
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: state == CompanionAvailability.available
+                                  ? const Color(0xFF98CFAD)
+                                  : Colors.white54,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          line(
+                            'Favorite',
+                            companionFood(data, 'Favorite'),
+                            lines: 6,
+                          ),
+                          const SizedBox(height: 4),
+                          line(
+                            'Liked',
+                            companionFood(data, 'Liked'),
+                            lines: 12,
+                          ),
+                          const SizedBox(height: 4),
+                          line('Location', companion?['location'], lines: 3),
+                          const SizedBox(height: 4),
+                          line('Today', todayHours(data, now), lines: 3),
+                        ] else ...[
+                          line(
+                            'Obtain',
+                            (companion?['acquisition'] as Map?)?['description'],
+                            lines: 8,
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Unlocked without wild feeding.',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.white60,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 4),
-                line(
-                  'Location',
-                  companion?['location'] ??
-                      (data['fields'] as Map?)?['Location:'],
-                ),
-                const SizedBox(height: 4),
-                if (companion?['scheduled'] == true)
-                  line('Today', todayHours(data, now)),
-                if (state == CompanionAvailability.available)
-                  line('Schedule', todayHours(data, now)),
               ] else if (section == 'Ingredients') ...[
                 Expanded(
                   child: line(
@@ -171,6 +241,14 @@ class CatalogCard extends StatelessWidget {
                   ),
                 ),
               ] else if (section == 'Recipes') ...[
+                Text(
+                  fieldText((data['recipe'] as Map?)?['category']),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Color(0xFF98CFAD),
+                  ),
+                ),
+                const SizedBox(height: 4),
                 Expanded(
                   child: line(
                     'Ingredients',
@@ -264,7 +342,24 @@ class CompanionSchedule extends StatelessWidget {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 10),
-            Text('Location: ${fieldText(info['location'])}'),
+            CompanionSourceBadge(info: info),
+            const SizedBox(height: 10),
+            Text(
+              'How to obtain: ${fieldText((info['acquisition'] as Map?)?['description'])}',
+            ),
+            if (info['scheduled'] == true) ...[
+              const SizedBox(height: 10),
+              Text('Favorite: ${companionFood(data, 'Favorite')}'),
+              const SizedBox(height: 8),
+              Text('Liked: ${companionFood(data, 'Liked')}'),
+              const SizedBox(height: 8),
+              Text(
+                'Approach: ${fieldText(info['feedingMethod'] ?? (data['fields'] as Map?)?['Feeding method:'])}',
+              ),
+              const SizedBox(height: 10),
+              Text('Location: ${fieldText(info['location'])}'),
+            ] else
+              const Text('Unlocked without wild feeding.'),
             if (info['scheduled'] == true) ...[
               const SizedBox(height: 12),
               const Text(

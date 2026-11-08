@@ -50,14 +50,14 @@ class Store {
       where: 'key=?',
       whereArgs: ['catalogMetadataVersion'],
     );
-    if (seeded.isNotEmpty && seeded.first['value'] == '4') return;
+    if (seeded.isNotEmpty && seeded.first['value'] == '5') return;
     final snapshot = jsonDecode(
       await rootBundle.loadString('assets/catalog.json'),
     );
     await importCatalog(snapshot);
     await db.insert('meta', {
       'key': 'catalogMetadataVersion',
-      'value': '4',
+      'value': '5',
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
@@ -114,6 +114,26 @@ class Store {
       'value': jsonEncode(value),
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
+
+  Future<Map<String, dynamic>> updateCollection(Map<String, bool> changes) =>
+      db.transaction((transaction) async {
+        final saved = await transaction.query(
+          'personal',
+          where: 'key=?',
+          whereArgs: ['progress'],
+        );
+        final progress = saved.isEmpty
+            ? <String, dynamic>{}
+            : Map<String, dynamic>.from(
+                jsonDecode(saved.single['value'] as String),
+              );
+        progress.addAll(changes);
+        await transaction.insert('personal', {
+          'key': 'progress',
+          'value': jsonEncode(progress),
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+        return progress;
+      });
 
   Future<List<Map<String, Object?>>> catalog() =>
       db.query('catalog', orderBy: 'title COLLATE NOCASE');

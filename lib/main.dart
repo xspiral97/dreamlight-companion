@@ -79,11 +79,13 @@ class _HomeState extends State<Home> {
   String companionFilter = 'All companions';
   bool timetable = false;
   String eventFilter = 'All dates';
+  String recipeFilter = 'All recipes';
+  bool marking = false;
   Map<String, dynamic> owned = {};
   bool syncing = false;
   bool caching = false;
   String status = 'Ready', last = 'Never';
-  String appVersion = '0.4.0', updateStatus = '';
+  String appVersion = '0.5.0', updateStatus = '';
   bool updating = false;
   DateTime? retryAfter;
   Timer? timer;
@@ -187,8 +189,40 @@ class _HomeState extends State<Home> {
   }
 
   Future<void> toggle(String id, bool value) async {
-    setState(() => owned[id] = value);
-    await widget.store.set('progress', owned);
+    final saved = await widget.store.updateCollection({id: value});
+    if (mounted) setState(() => owned = saved);
+  }
+
+  Future<void> markAll(List<Map<String, Object?>> matches, bool value) async {
+    if (marking || matches.isEmpty) return;
+    final ids = matches.map((row) => row['id'] as String).toList();
+    final before = {for (final id in ids) id: owned[id] == true};
+    setState(() => marking = true);
+    try {
+      final saved = await widget.store.updateCollection({
+        for (final id in ids) id: value,
+      });
+      if (!mounted) return;
+      setState(() => owned = saved);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${value ? 'Marked' : 'Unmarked'} ${ids.length} matching items.',
+          ),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () async {
+              final restored = await widget.store.updateCollection(before);
+              if (mounted) setState(() => owned = restored);
+            },
+          ),
+        ),
+      );
+    } catch (error) {
+      if (mounted) message('Could not save collection progress: $error');
+    } finally {
+      if (mounted) setState(() => marking = false);
+    }
   }
 
   Future<void> backup() async {
@@ -571,6 +605,11 @@ class _HomeState extends State<Home> {
           return false;
         }
       }
+      if (section == 'Recipes' &&
+          recipeFilter != 'All recipes' &&
+          (details['recipe'] as Map?)?['category'] != recipeFilter) {
+        return false;
+      }
       final id = r['id'] as String;
       return matchesSection(
             section,
@@ -624,6 +663,27 @@ class _HomeState extends State<Home> {
                 ),
               ),
               const SizedBox(height: 12),
+              if (section == 'Recipes')
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Wrap(
+                    spacing: 8,
+                    children: [
+                      for (final category in [
+                        'All recipes',
+                        'Appetizers',
+                        'Entrées',
+                        'Desserts',
+                      ])
+                        ChoiceChip(
+                          label: Text(category),
+                          selected: recipeFilter == category,
+                          onSelected: (_) =>
+                              setState(() => recipeFilter = category),
+                        ),
+                    ],
+                  ),
+                ),
               if (section == 'Characters' || section == 'Companions')
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
@@ -707,6 +767,36 @@ class _HomeState extends State<Home> {
             ],
           ),
         ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                '${filtered.length} matching items',
+                style: const TextStyle(fontSize: 12),
+              ),
+              Tooltip(
+                message: 'Mark every item matching the current search, category, area and progress filters as collected.',
+                child: OutlinedButton.icon(
+                  onPressed: marking || filtered.isEmpty
+                      ? null
+                      : () => markAll(filtered, true),
+                  icon: const Icon(Icons.done_all, size: 18),
+                  label: const Text('Mark all'),
+                ),
+              ),
+              TextButton(
+                onPressed: marking || filtered.isEmpty
+                    ? null
+                    : () => markAll(filtered, false),
+                child: const Text('Unmark all'),
+              ),
+            ],
+          ),
+        ),
         Expanded(
           child:
               timetable && (section == 'Characters' || section == 'Companions')
@@ -730,7 +820,9 @@ class _HomeState extends State<Home> {
                   padding: const EdgeInsets.all(20),
                   gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
                     maxCrossAxisExtent: 240,
-                    mainAxisExtent: section == 'Fish' || section == 'Companions'
+                    mainAxisExtent: section == 'Companions'
+                        ? 304
+                        : section == 'Fish'
                         ? 216
                         : section == 'Recipes'
                         ? 184

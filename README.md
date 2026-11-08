@@ -2,6 +2,14 @@
 
 Unofficial Flutter companion for Disney Dreamlight Valley on Windows, Android and macOS. English interface; SQLite data stays on your device. No account or game-save modification.
 
+## Version 0.5.0
+
+Companion cards now show Favorite and Liked food directly, including variant-specific Sunbird preferences. All 90 wild variants have verified food and approach data. Acquisition badges distinguish Base game / DLC, Premium Shop, paid Editions/Bundles, Star Paths, quests, crafting and events/promotions. These come from the wiki's feeding table and individual source-page revisions, not whether an animal has a wild schedule.
+
+Recipes have Appetizers, Entrées and Desserts filters, plus their category shown on each card (95 / 227 / 158 recipes in this snapshot). Every catalog section has Mark all / Unmark all for the exact current search/category/area/progress results, with Undo. Bulk progress writes are atomic and preserve unrelated progress and daily feedings.
+
+Selecting a planner plot exposes a separate action bar with Edit crop and Delete crop; deletion has Undo. The well remains mandatory. The planner now bundles all 58 crops/materials in the verified Gardening tables and Seeds category, including seasonal Spring V-EGG-etable and Cotton. Eight crops with plural Seeds source links were previously missed: Beetroot, Dark Chocolate Coffee Beans, Dill, Fairy Kamut, Fairy Sprinkles, Lollipop Fruit, Pearly Barley and Scarlet Kale. Their images are bundled for offline use. Temporary quest plants outside these source lists are not claimed as covered.
+
 ## Version 0.4.0
 
 Ingredient cards display their actual zone; recipe cards show ingredients and quantities/category alternatives. The reference-table importer includes Cooking and Ingredients, with structured coverage checks before publishing.
@@ -22,7 +30,7 @@ Companion cards show location, today's hours and current availability. A filter 
 
 Refresh downloads one shared compressed catalog from GitHub, not thousands of individual wiki requests. GitHub Actions refreshes the source tables every six hours, spaces API requests six seconds apart, limits individual detail-page refreshes to five per run, and respects Retry-After. If collection fails, the last valid published feed remains available. The wiki currently returns HTTP 403 to GitHub-hosted collection attempts; in-app refresh therefore retrieves the last published snapshot, not a guaranteed live copy of the wiki. Source freshness depends on the wiki permitting the collector. Full articles still cache when opened; bulk crawling from the client has been removed.
 
-Farm planner: 50 bundled crop/material pictures, one movable Wishing Well per layout, floating-island bounds of 65x65 planting cells / 130x130 placement units, blocked-cell editing and collision checks. Exact biome masks have not been verified; those dimensions and blocked terrain remain manually configurable.
+Farm planner: 58 bundled crop/material pictures, one movable Wishing Well per layout, floating-island bounds of 65x65 planting cells / 130x130 placement units, blocked-cell editing and collision checks. Exact biome masks have not been verified; those dimensions and blocked terrain remain manually configurable.
 
 ## Updates
 
