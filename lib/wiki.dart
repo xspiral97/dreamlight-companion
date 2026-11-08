@@ -71,6 +71,12 @@ class Wiki {
     } catch (_) {
       /* Use the established collection pages if discovery is temporarily unavailable. */
     }
+    final knownCategories = <String, Set<String>>{};
+    for (final row in await store.catalog()) {
+      knownCategories[row['id'] as String] = (jsonDecode(
+        row['categories'] as String,
+      ) as List).cast<String>().toSet();
+    }
     final failures = <String>[];
     int records = 0, successful = 0;
     for (final source in sources) {
@@ -90,6 +96,12 @@ class Wiki {
         await store.db.transaction((t) async {
           final batch = t.batch();
           for (final row in entries) {
+            final id = row['id'] as String;
+            final combined = knownCategories.putIfAbsent(id, () => {});
+            combined.addAll(
+              (jsonDecode(row['categories'] as String) as List).cast<String>(),
+            );
+            row['categories'] = jsonEncode(combined.toList());
             batch.rawInsert(
               'INSERT INTO catalog(id,title,categories,details) VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET title=excluded.title,categories=excluded.categories,details=COALESCE(catalog.details,excluded.details)',
               [row['id'], row['title'], row['categories'], row['details']],

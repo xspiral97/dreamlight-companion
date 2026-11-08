@@ -15,6 +15,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
       - run: flutter pub get
       - run: dart format --output=none --set-exit-if-changed lib test
       - run: flutter analyze
@@ -23,6 +24,7 @@ jobs:
     needs: verify
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: windows-latest
@@ -37,11 +39,13 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
       - uses: actions/setup-java@v4
         if: matrix.target == 'apk'
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
       - name: Restore persistent Android signing key
         if: matrix.target == 'apk'
         env:
@@ -56,6 +60,11 @@ jobs:
           ANDROID_SIGNING_STORE_PASSWORD: android
           ANDROID_SIGNING_KEY_ALIAS: androiddebugkey
           ANDROID_SIGNING_KEY_PASSWORD: android
+      - name: Ensure Inno Setup
+        if: matrix.target == 'windows'
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup --yes --no-progress }
       - name: Windows installer and portable updater package
         if: matrix.target == 'windows'
         shell: pwsh

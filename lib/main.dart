@@ -75,7 +75,7 @@ class _HomeState extends State<Home> {
   bool syncing = false;
   bool caching = false;
   String status = 'Ready', last = 'Never';
-  String appVersion = '0.2.0', updateStatus = '';
+  String appVersion = '0.2.1', updateStatus = '';
   bool updating = false;
   DateTime? retryAfter;
   Timer? timer;
@@ -555,9 +555,11 @@ class _HomeState extends State<Home> {
     }
     final filtered = rows.where((r) {
       final id = r['id'] as String;
-      return (section == 'All' ||
-              sectionFor(r['title'] as String, r['categories'] as String) ==
-                  section) &&
+      return matchesSection(
+            section,
+            r['title'] as String,
+            r['categories'] as String,
+          ) &&
           (query.isEmpty ||
               '${r['title']} ${r['categories']}'.toLowerCase().contains(
                 query.toLowerCase(),

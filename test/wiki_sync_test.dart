@@ -50,10 +50,30 @@ void main() {
       );
       try {
         await store.set('progress', {'549': true});
+        await store.db.insert('catalog', {
+          'id': '549',
+          'title': 'Pumpkin',
+          'categories': jsonEncode(['Crafting']),
+          'details': '{"cached":true}',
+        });
         final report = await wiki.sync((_) {});
         expect(report.sources, 1);
         expect(report.failures, isNotEmpty);
-        expect((await store.catalog()).single['title'], 'Pumpkin');
+        final record = (await store.catalog()).single;
+        expect(record['title'], 'Pumpkin');
+        expect(
+          matchesSection('Crafting', 'Pumpkin', record['categories'] as String),
+          true,
+        );
+        expect(
+          matchesSection(
+            'Ingredients',
+            'Pumpkin',
+            record['categories'] as String,
+          ),
+          true,
+        );
+        expect(record['details'], '{"cached":true}');
         expect((await store.get('progress'))['549'], true);
         expect(
           await store.db.query('meta', where: 'key=?', whereArgs: ['lastSync']),

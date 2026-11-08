@@ -2,7 +2,7 @@
 
 Unofficial Flutter companion for Disney Dreamlight Valley on Windows, Android and macOS. English interface; SQLite data stays on your device. No account or game-save modification.
 
-## Version 0.2.0
+## Version 0.2.1
 
 - Crop planner includes 50 bundled crop/material pictures (regular plantable ingredients, seasonal Spring V-EGG-etable and Cotton), plus the actual Wishing Well icon. New seed-grown ingredients and image URLs are discovered by wiki refresh.
 - Floating islands use 65×65 planting cells, with an optional 130×130 placement subgrid. A well occupies 6×6 planting cells (12×12 placement units). Its initial position is an editable planning marker.
@@ -10,6 +10,8 @@ Unofficial Flutter companion for Disney Dreamlight Valley on Windows, Android an
 - Blocked cells and well footprints reject crop placement, resizing and dragging. Existing layouts keep their original dimensions and coordinates. Backup validation supports variable map sizes.
 - Refresh uses rendered collection pages instead of the allpages generator that was returning HTTP 403. All 16 current collection sources were verified live (8,433 collection memberships; shared entries use the same page ID). Successful sources are saved independently; a failed source preserves old data and appears in the status. Automatic failed retries are throttled to one hour.
 - A bundled catalog starts offline. Full page text downloads when opened; detail packs can be cached from Settings. Pictures of the 50 bundled crops and well work offline; other images cache on demand. All text and image attribution is in ATTRIBUTION.md.
+
+Shared items retain membership in multiple collections (for example, crafted furniture remains visible in both Crafting and Furniture).
 
 ## Updates
 

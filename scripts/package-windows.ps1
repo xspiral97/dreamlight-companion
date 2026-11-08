@@ -12,7 +12,9 @@ try {
  $vswhere=Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
  $vsPath=& $vswhere -latest -products '*' -property installationPath
  $crt=Get-ChildItem (Join-Path $vsPath 'VC\Redist\MSVC') -Directory | Where-Object Name -Match '^\d' | Sort-Object Name -Descending | Select-Object -First 1
- $runtime=Join-Path $crt.FullName 'x64\Microsoft.VC143.CRT'
+ $runtime=Get-ChildItem (Join-Path $crt.FullName 'x64') -Directory -Filter 'Microsoft.VC*.CRT' | Select-Object -First 1
+ if(-not $runtime){throw 'Visual C++ runtime directory not found'}
+ $runtime=$runtime.FullName
  Copy-Item (Join-Path $runtime '*.dll') -Destination $release -Force
  New-Item -ItemType Directory -Force dist | Out-Null
  Compress-Archive -Path "$release\*" -DestinationPath dist\DreamlightCompanion-Windows.zip -Force

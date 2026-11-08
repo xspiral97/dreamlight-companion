@@ -238,3 +238,15 @@ void validateLayouts(dynamic value) {
     }
   }
 }
+
+bool matchesSection(String section, String title, String categories) {
+  if (section == 'All') return true;
+  final labels = (jsonDecode(categories) as List).cast<String>();
+  const aliases = {
+    'Recipes': 'Meals',
+    'Clothing': 'Clothing Sets',
+    'Furniture': 'Furniture Sets',
+  };
+  return labels.contains(aliases[section] ?? section) ||
+      sectionFor(title, categories) == section;
+}

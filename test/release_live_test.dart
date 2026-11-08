@@ -13,7 +13,7 @@ void main() {
       try {
         final release = await updater.check('0.1.0');
         expect(release, isNotNull);
-        expect(release!.version, 'v0.2.0');
+        expect(newerVersion(release!.version, '0.1.0'), true);
         final config = await updater.stage(
           release,
           work,
@@ -21,7 +21,10 @@ void main() {
           application: app,
         );
         expect(config.existsSync(), true);
-        expect(await updater.check('0.2.0'), isNull);
+        expect(
+          await updater.check(release.version.replaceFirst('v', '')),
+          isNull,
+        );
       } finally {
         updater.client.close();
         work.deleteSync(recursive: true);
