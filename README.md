@@ -2,6 +2,12 @@
 
 Unofficial Flutter companion for Disney Dreamlight Valley on Windows, Android and macOS. English interface; SQLite data stays on your device. No account or game-save modification.
 
+## Version 0.5.1
+
+Fixes Windows updates closing the application without installing or reopening it. Direct Dart detached launches could terminate PowerShell before its script ran. The launcher now uses a hidden broker with valid standard streams and waits for an explicit helper acknowledgement before the app exits. The helper logs each phase, replaces files after process exit, and waits for the restarted app to confirm its first rendered frame. Copy or startup failures restore the previous files (including removing newly added files) and restart the previous app. A helper that never acknowledges startup leaves the current app open.
+
+Windows release CI now exercises the real parent-process shutdown, executable replacement, restart acknowledgement and startup-failure rollback, including paths with spaces and Unicode. Earlier verification covered download/staging and direct helper calls; it did not cover the broken detached launch path. Existing affected clients may need one repair from outside the app to acquire the fixed launcher.
+
 ## Version 0.5.0
 
 Companion cards now show Favorite and Liked food directly, including variant-specific Sunbird preferences. All 90 wild variants have verified food and approach data. Acquisition badges distinguish Base game / DLC, Premium Shop, paid Editions/Bundles, Star Paths, quests, crafting and events/promotions. These come from the wiki's feeding table and individual source-page revisions, not whether an animal has a wild schedule.

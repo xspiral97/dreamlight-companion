@@ -30,7 +30,7 @@ String selectedZone = 'Device local';
 DateTime gameNow() => selectedZone == 'Device local'
     ? DateTime.now()
     : tz.TZDateTime.now(tz.getLocation(selectedZone));
-Future<void> main() async {
+Future<void> main(List<String> arguments) async {
   WidgetsFlutterBinding.ensureInitialized();
   tzdata.initializeTimeZones();
   final store = Store();
@@ -39,6 +39,24 @@ Future<void> main() async {
   await initializeItemImages();
   selectedZone = await store.get('timezone', 'Device local');
   runApp(CompanionApp(store: store));
+  final startup = arguments
+      .where((argument) => argument.startsWith('--update-ready='))
+      .firstOrNull;
+  if (startup != null && Platform.isWindows) {
+    final file = File(startup.substring('--update-ready='.length)).absolute;
+    final updates = Directory(path.join(store.home.path, 'updates')).absolute;
+    if (path.isWithin(updates.path, file.path)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await file.writeAsString(
+          jsonEncode({
+            'pid': pid,
+            'time': DateTime.now().toUtc().toIso8601String(),
+          }),
+          flush: true,
+        );
+      });
+    }
+  }
 }
 
 class CompanionApp extends StatelessWidget {
@@ -85,7 +103,7 @@ class _HomeState extends State<Home> {
   bool syncing = false;
   bool caching = false;
   String status = 'Ready', last = 'Never';
-  String appVersion = '0.5.0', updateStatus = '';
+  String appVersion = '0.5.1', updateStatus = '';
   bool updating = false;
   DateTime? retryAfter;
   Timer? timer;

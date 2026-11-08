@@ -55,6 +55,9 @@ jobs:
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/signing.jks"
           echo "ANDROID_SIGNING_STORE_FILE=$RUNNER_TEMP/signing.jks" >> "$GITHUB_ENV"
       - run: flutter pub get
+      - name: Verify Windows update shutdown, restart and rollback
+        if: matrix.target == 'windows'
+        run: flutter test test/updater_test.dart test/update_helper_test.dart test/update_lifecycle_test.dart
       - run: flutter build ${{ matrix.target }} --release
         env:
           ANDROID_SIGNING_STORE_PASSWORD: android

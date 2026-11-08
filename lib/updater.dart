@@ -179,6 +179,10 @@ class AppUpdater {
     await config.writeAsString(
       jsonEncode({
         'pid': pid,
+        'ready': p.join(dir.path, 'helper-ready.json'),
+        'status': p.join(dir.path, 'status.json'),
+        'startupReady': p.join(dir.path, 'application-started.json'),
+        'version': release.version,
         'application': app.path,
         'staged': stage.path,
         'backup': p.join(dir.path, 'backup'),
@@ -245,49 +249,170 @@ class AppUpdater {
     return apk;
   }
 
-  Future<void> apply(File config) async {
-    await Process.start('powershell.exe', [
+  Future<void> apply(
+    File config, {
+    Duration startupTimeout = const Duration(seconds: 15),
+  }) async {
+    final shell = p.join(
+      Platform.environment['SystemRoot'] ?? r'C:\Windows',
+      'System32',
+      'WindowsPowerShell',
+      'v1.0',
+      'powershell.exe',
+    );
+    final ready = File(p.join(config.parent.path, 'helper-ready.json'));
+    final stderr = File(p.join(config.parent.path, 'launch.stderr.log'));
+    final stdout = File(p.join(config.parent.path, 'launch.stdout.log'));
+    if (await ready.exists()) await ready.delete();
+    final cancelled = File(p.join(config.parent.path, 'cancelled'));
+    if (await cancelled.exists()) await cancelled.delete();
+    final invocation = powershellEncodedCommand(
+      "\$ProgressPreference='SilentlyContinue'; & ${powershellLiteral(p.join(config.parent.path, 'apply-update.ps1'))} -ConfigPath ${powershellLiteral(config.path)}",
+    );
+    // A normal broker gives PowerShell valid standard handles. Launching it
+    // directly with Dart's Windows detached modes can exit before the script runs.
+    final broker =
+        "\$ErrorActionPreference='Stop'; \$ProgressPreference='SilentlyContinue'; "
+        "\$child=Start-Process -FilePath ${powershellLiteral(shell)} "
+        "-ArgumentList @('-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-EncodedCommand','$invocation') "
+        "-WindowStyle Hidden -WorkingDirectory ${powershellLiteral(config.parent.path)} "
+        "-RedirectStandardOutput ${powershellLiteral(stdout.path)} "
+        "-RedirectStandardError ${powershellLiteral(stderr.path)} -PassThru; \$child.Id";
+    final launch = await Process.start(shell, [
+      '-NoLogo',
       '-NoProfile',
+      '-NonInteractive',
       '-ExecutionPolicy',
       'Bypass',
       '-WindowStyle',
       'Hidden',
-      '-File',
-      p.join(config.parent.path, 'apply-update.ps1'),
-      '-ConfigPath',
-      config.path,
-    ], mode: ProcessStartMode.detached);
+      '-EncodedCommand',
+      powershellEncodedCommand(broker),
+    ]);
+    final launchOutput = StringBuffer();
+    final launchErrors = StringBuffer();
+    launch.stdout.transform(utf8.decoder).listen(launchOutput.write);
+    launch.stderr.transform(utf8.decoder).listen(launchErrors.write);
+    await launch.stdin.close();
+    // Do not await the broker's exit: PowerShell may keep redirected stream
+    // readers alive while the helper waits for this application to exit.
+    final deadline = DateTime.now().add(startupTimeout);
+    while (DateTime.now().isBefore(deadline)) {
+      if (await ready.exists()) {
+        try {
+          final result = jsonDecode(await ready.readAsString());
+          if (result['pid'] is int &&
+              result['pid'] > 0 &&
+              result['phase'] == 'waiting_for_exit') {
+            return;
+          }
+        } on FormatException {
+          // The helper may still be completing the small acknowledgement file.
+        }
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    await cancelled.writeAsString('Helper startup was not acknowledged.');
+    final error = await stderr.exists() ? await stderr.readAsString() : '';
+    throw Exception(
+      'Update helper did not confirm startup. The app will stay open. '
+      '$error ${launchErrors.toString()} Logs: ${config.parent.path}',
+    );
   }
 }
+
+String powershellLiteral(String value) => "'${value.replaceAll("'", "''")}'";
+String powershellEncodedCommand(String value) => base64Encode([
+  for (final unit in value.codeUnits) ...[unit & 255, unit >> 8],
+]);
 
 const updateHelper = r'''
 param([Parameter(Mandatory=$true)][string]$ConfigPath)
 $ErrorActionPreference='Stop'
-$config=Get-Content -LiteralPath $ConfigPath -Raw | ConvertFrom-Json
-$changed=@()
+$ProgressPreference='SilentlyContinue'
+$config=Get-Content -LiteralPath $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$work=Split-Path -LiteralPath $ConfigPath
+$readyPath=Join-Path $work 'helper-ready.json'
+$statusPath=Join-Path $work 'status.json'
+$changes=@()
+$restarted=$null
+$utf8=New-Object System.Text.UTF8Encoding($false)
+function Status([string]$phase,[string]$message) {
+ $state=@{pid=$PID;phase=$phase;message=$message;time=[DateTime]::UtcNow.ToString('o')}
+ [IO.File]::WriteAllText($statusPath,($state|ConvertTo-Json -Compress),$utf8)
+ Add-Content -LiteralPath $config.log -Encoding UTF8 -Value ("{0} [{1}] {2}" -f $state.time,$phase,$message)
+}
+function ChildPath([string]$root,[string]$name) {
+ if([IO.Path]::IsPathRooted($name) -or $name.Contains(':') -or ($name -split '[/\\]') -contains '..'){throw "Unsafe update path: $name"}
+ $base=[IO.Path]::GetFullPath($root).TrimEnd('\')+'\'
+ $result=[IO.Path]::GetFullPath((Join-Path $root $name))
+ if(-not $result.StartsWith($base,[StringComparison]::OrdinalIgnoreCase)){throw "Path outside update folder: $name"}
+ return $result
+}
 try {
+ if(-not $config.application -or -not $config.staged -or -not $config.files -or -not $config.log){throw 'Incomplete update configuration.'}
+ Status 'waiting_for_exit' 'Helper started; waiting for the application to exit.'
+ [IO.File]::WriteAllText($readyPath,(@{pid=$PID;phase='waiting_for_exit'}|ConvertTo-Json -Compress),$utf8)
  Wait-Process -Id $config.pid -Timeout 90 -ErrorAction SilentlyContinue
  if(Get-Process -Id $config.pid -ErrorAction SilentlyContinue){throw 'Application did not exit; no files were replaced.'}
+ if(Test-Path -LiteralPath (Join-Path $work 'cancelled')){throw 'Update cancelled because startup was not acknowledged.'}
+ Status 'installing' 'Application exited. Backing up and replacing files.'
  foreach($name in $config.files){
-  $source=Join-Path $config.staged $name
-  $target=Join-Path $config.application $name
-  $backup=Join-Path $config.backup $name
-  if(Test-Path -LiteralPath $target){
+  $source=ChildPath $config.staged $name
+  $target=ChildPath $config.application $name
+  $backup=ChildPath $config.backup $name
+  $existed=Test-Path -LiteralPath $target
+  if($existed){
    New-Item -ItemType Directory -Force (Split-Path $backup) | Out-Null
    Copy-Item -LiteralPath $target -Destination $backup -Force
-   $changed+=@{Target=$target;Backup=$backup}
   }
+  $changes+=@{Target=$target;Backup=$backup;Existed=$existed}
   New-Item -ItemType Directory -Force (Split-Path $target) | Out-Null
   Copy-Item -LiteralPath $source -Destination $target -Force
  }
- 'Update installed successfully.' | Set-Content -LiteralPath $config.log
+ Status 'installed' 'Update installed successfully.'
+ if($config.restart -ne $false){
+  Status 'restarting' 'Starting the updated application.'
+  $start=@{FilePath=(Join-Path $config.application 'dreamlight_companion.exe');WorkingDirectory=$config.application;PassThru=$true;WindowStyle='Normal'}
+  if($config.startupReady){
+   if(Test-Path -LiteralPath $config.startupReady){Remove-Item -LiteralPath $config.startupReady -Force}
+   # Start-Process joins arguments into a command line; quote paths containing spaces.
+   $start.ArgumentList=@('"--update-ready='+$config.startupReady+'"')
+  }
+  $restarted=Start-Process @start
+  $deadline=[DateTime]::UtcNow.AddSeconds(40)
+  $healthy=$false
+  do {
+   $restarted.Refresh()
+   if($restarted.HasExited){throw "Updated application exited during startup (code $($restarted.ExitCode))."}
+   if($config.startupReady -and (Test-Path -LiteralPath $config.startupReady)){
+    try {$ack=Get-Content -LiteralPath $config.startupReady -Raw -Encoding UTF8 | ConvertFrom-Json; $healthy=($ack.pid -eq $restarted.Id)}catch{}
+   }elseif(-not $config.startupReady){$healthy=$true}
+   if(-not $healthy){Start-Sleep -Milliseconds 200}
+  }while(-not $healthy -and [DateTime]::UtcNow -lt $deadline)
+  if(-not $healthy){throw 'Updated application did not confirm its first rendered frame.'}
+  Status 'restarted' "Updated application is ready (PID $($restarted.Id))."
+ }
 }catch{
  $failure=$_.Exception.Message
- foreach($entry in $changed){Copy-Item -LiteralPath $entry.Backup -Destination $entry.Target -Force -ErrorAction Continue}
- "Update failed and existing files were restored: $failure" | Set-Content -LiteralPath $config.log
-}finally{
- if($config.restart -ne $false -and -not(Get-Process -Id $config.pid -ErrorAction SilentlyContinue)){
-  Start-Process -FilePath (Join-Path $config.application 'dreamlight_companion.exe') -WorkingDirectory $config.application -WindowStyle Normal
+ $rollbackErrors=@()
+ if($restarted){
+  try {$restarted.Refresh(); if(-not $restarted.HasExited){$restarted.Kill();$restarted.WaitForExit(10000)|Out-Null}}catch{$rollbackErrors+=$_.Exception.Message}
+ }
+ foreach($entry in $changes){
+  try {
+   if($entry.Existed){Copy-Item -LiteralPath $entry.Backup -Destination $entry.Target -Force}
+   elseif(Test-Path -LiteralPath $entry.Target){Remove-Item -LiteralPath $entry.Target -Force}
+  }catch{$rollbackErrors+=$_.Exception.Message}
+ }
+ $message="Update failed and existing files were restored: $failure"
+ if($rollbackErrors.Count -gt 0){$message+=" Rollback errors: $($rollbackErrors -join '; ')"}
+ Status 'failed' $message
+ if($changes.Count -gt 0 -and $config.restart -ne $false -and -not(Get-Process -Id $config.pid -ErrorAction SilentlyContinue)){
+  try {
+   $old=Start-Process -FilePath (Join-Path $config.application 'dreamlight_companion.exe') -WorkingDirectory $config.application -WindowStyle Normal -PassThru
+   Status 'rolled_back' "$message Previous application restarted (PID $($old.Id))."
+  }catch{Status 'failed' "$message Previous application could not restart: $($_.Exception.Message)"}
  }
 }
 ''';
