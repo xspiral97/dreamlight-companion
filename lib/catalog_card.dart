@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'item_image.dart';
 import 'schedule.dart';
 import 'store.dart';
+import 'timetable.dart';
 
 enum CompanionAvailability { available, unavailable, unknown, notScheduled }
 
@@ -160,6 +161,39 @@ class CatalogCard extends StatelessWidget {
                   line('Today', todayHours(data, now)),
                 if (state == CompanionAvailability.available)
                   line('Schedule', todayHours(data, now)),
+              ] else if (section == 'Ingredients') ...[
+                Expanded(
+                  child: line(
+                    'Zone',
+                    (data['ingredient'] as Map?)?['locations'] ??
+                        (data['fields'] as Map?)?['Zones:'],
+                    lines: 5,
+                  ),
+                ),
+              ] else if (section == 'Recipes') ...[
+                Expanded(
+                  child: line(
+                    'Ingredients',
+                    ((data['recipe'] as Map?)?['ingredients'] as List?)?.join(
+                      ' · ',
+                    ),
+                    lines: 7,
+                  ),
+                ),
+              ] else if (section == 'Events' || section == 'Star Paths') ...[
+                line(
+                  'Status',
+                  eventStatus(data['event'] as Map? ?? {}, now),
+                  lines: 1,
+                ),
+                const SizedBox(height: 4),
+                Expanded(
+                  child: line(
+                    'Dates',
+                    (data['event'] as Map?)?['dates'],
+                    lines: 4,
+                  ),
+                ),
               ] else
                 Expanded(
                   child: Text(

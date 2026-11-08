@@ -1,5 +1,8 @@
 import 'dart:math' as math;
 import 'dart:convert';
+import 'dart:io';
+
+import 'package:path/path.dart' as path;
 
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -77,8 +80,19 @@ class _PlannerState extends State<Planner> {
       final crop = Crop.fromJson(raw);
       if (!images.any((c) => c.name == crop.name)) images.add(crop);
     }
+    final original = jsonEncode(saved);
     for (final entry in saved) {
       migrateLayout(entry);
+    }
+    if (jsonEncode(saved) != original) {
+      final backup = File(
+        path.join(
+          widget.store.home.path,
+          'layouts-before-well-repair-${DateTime.now().millisecondsSinceEpoch}.json',
+        ),
+      );
+      await backup.writeAsString(original, flush: true);
+      await widget.store.set('layouts', saved);
     }
     if (mounted) {
       setState(() {
@@ -209,21 +223,22 @@ class _PlannerState extends State<Planner> {
                 if (name.text.trim().isEmpty ||
                     w == null ||
                     h == null ||
-                    w < 1 ||
-                    h < 1 ||
+                    w < 6 ||
+                    h < 6 ||
                     w > 256 ||
                     h > 256) {
                   update(
-                    () => error = 'Enter a name and dimensions from 1 to 256.',
+                    () => error = 'Enter a name and dimensions from 6 to 256.',
                   );
                   return;
                 }
                 if (!create &&
-                    plots.any(
-                      (p) => p['x'] + p['w'] > w || p['y'] + p['h'] > h,
-                    )) {
+                    [
+                      ...plots,
+                      ...layout['wells'],
+                    ].any((p) => p['x'] + p['w'] > w || p['y'] + p['h'] > h)) {
                   update(
-                    () => error = 'Existing plots would fall outside these bounds. Move them first.',
+                    () => error = 'Existing plots or the well would fall outside these bounds. Move them first.',
                   );
                   return;
                 }
@@ -585,23 +600,9 @@ class _PlannerState extends State<Planner> {
                 label: const Text('Placement subgrid'),
                 onSelected: (v) => setState(() => subgrid = v),
               ),
-              OutlinedButton.icon(
-                onPressed: () {
-                  final space = firstSpace(layout, 6, 6);
-                  if (space == null) {
-                    message('No free space for a well.');
-                    return;
-                  }
-                  (layout['wells'] as List).add({
-                    'x': space.$1,
-                    'y': space.$2,
-                    'w': 6,
-                    'h': 6,
-                  });
-                  save();
-                },
-                icon: const Icon(Icons.water_drop),
-                label: const Text('Add well'),
+              const Chip(
+                avatar: Icon(Icons.water_drop, size: 18),
+                label: Text('1 well · drag to move'),
               ),
               if (selected != null) ...[
                 TextButton(onPressed: edit, child: const Text('Edit / resize')),
@@ -733,10 +734,6 @@ class _PlannerState extends State<Planner> {
                           child: GestureDetector(
                             onPanUpdate: (d) => move(well, d.delta, well: true),
                             onPanEnd: (_) => snap(well),
-                            onLongPress: () {
-                              (layout['wells'] as List).remove(well);
-                              save();
-                            },
                             child: Container(
                               decoration: BoxDecoration(
                                 color: const Color(0xFF46788B),

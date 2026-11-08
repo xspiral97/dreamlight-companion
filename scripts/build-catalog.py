@@ -1,6 +1,7 @@
 """Build the shared catalog with paced wiki access; no player data is uploaded."""
 import argparse, datetime, email.utils, gzip, json, math, pathlib, re, time, urllib.request, urllib.parse, urllib.error
 from bs4 import BeautifulSoup
+from reference_data import enrich
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 CACHE=ROOT/'build'/'wiki-source-cache'; CACHE.mkdir(parents=True,exist_ok=True)
 LAST=0.0
@@ -180,6 +181,7 @@ def build(refresh):
             except Exception:pass
         row['details']=json.dumps(details,ensure_ascii=False)
     snapshot.update({'schemaVersion':2,'generatedAt':datetime.datetime.now(datetime.timezone.utc).isoformat(),'failures':failures,'records':list(records.values())})
+    enrich(snapshot,page)
     text=json.dumps(snapshot,ensure_ascii=False,separators=(',',':'))
     (ROOT/'assets/catalog.json').write_text(text,encoding='utf-8');(ROOT/'data').mkdir(exist_ok=True)
     with open(ROOT/'data/catalog.json.gz','wb') as output:output.write(gzip.compress(text.encode('utf-8'),mtime=0))

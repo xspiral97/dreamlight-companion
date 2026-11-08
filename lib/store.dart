@@ -50,14 +50,14 @@ class Store {
       where: 'key=?',
       whereArgs: ['catalogMetadataVersion'],
     );
-    if (seeded.isNotEmpty && seeded.first['value'] == '2') return;
+    if (seeded.isNotEmpty && seeded.first['value'] == '4') return;
     final snapshot = jsonDecode(
       await rootBundle.loadString('assets/catalog.json'),
     );
     await importCatalog(snapshot);
     await db.insert('meta', {
       'key': 'catalogMetadataVersion',
-      'value': '2',
+      'value': '4',
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
@@ -184,6 +184,29 @@ const sections = [
   'Guides',
 ];
 String sectionFor(String title, String categories) {
+  final labels = (jsonDecode(categories) as List).cast<String>();
+  for (final entry in {
+    'Companions': 'Companions',
+    'Meals': 'Recipes',
+    'Ingredients': 'Ingredients',
+    'Foraging': 'Foraging',
+    'Characters': 'Characters',
+    'Fish': 'Fish',
+    'Gems': 'Gems',
+    'Exhibition': 'Exhibition',
+    'Star Paths': 'Star Paths',
+    'Events': 'Events',
+    'Crafting': 'Crafting',
+    'Clothing Sets': 'Clothing',
+    'Furniture Sets': 'Furniture',
+    'Memories': 'Memories',
+    'Timebending': 'Timebending',
+    'Board Game': 'Board Game',
+    'Snippets': 'Snippets',
+    'Mounts': 'Mounts',
+  }.entries) {
+    if (labels.contains(entry.key)) return entry.value;
+  }
   final s = categories.toLowerCase();
   const mapping = {
     'Companions': ['critter', 'companion'],
@@ -294,6 +317,28 @@ bool matchesSection(String section, String title, String categories) {
     'Clothing': 'Clothing Sets',
     'Furniture': 'Furniture Sets',
   };
-  return labels.contains(aliases[section] ?? section) ||
-      sectionFor(title, categories) == section;
+  const canonical = {
+    'Companions',
+    'Meals',
+    'Ingredients',
+    'Foraging',
+    'Characters',
+    'Fish',
+    'Gems',
+    'Crafting',
+    'Clothing Sets',
+    'Furniture Sets',
+    'Memories',
+    'Timebending',
+    'Board Game',
+    'Snippets',
+    'Mounts',
+    'Exhibition',
+    'Events',
+    'Star Paths',
+  };
+  if (labels.any(canonical.contains)) {
+    return labels.contains(aliases[section] ?? section);
+  }
+  return sectionFor(title, categories) == section;
 }

@@ -2,7 +2,17 @@
 
 Unofficial Flutter companion for Disney Dreamlight Valley on Windows, Android and macOS. English interface; SQLite data stays on your device. No account or game-save modification.
 
-## Version 0.3.0
+## Version 0.4.0
+
+Ingredient cards display their actual zone; recipe cards show ingredients and quantities/category alternatives. The reference-table importer includes Cooking and Ingredients, with structured coverage checks before publishing.
+
+Characters and Companions have Cards / Timetable views. The 24-hour tables keep names/locations and hour headings visible while scrolling, highlight the current configured local hour, and include Jump to now. Companion timetables offer a weekday selector and include scheduled wild variants only. All 74 character schedules come from the wiki Time table. These are published expected venues, not live tracking; a restaurant can mean Chez Remy or Tiana’s Palace, and quests/stations may override the schedule.
+
+Companion collection filtering now uses the actual collection labels; Exhibition checklist rows no longer appear as duplicate companions. Events and Star Paths contain 50 guide records, date/status filters, and cached duty/reward text for the currently active/permanent Star Paths. Past event listings include dates and links to the source wiki.
+
+Each planner layout contains exactly one movable, non-removable well. Existing multiple-well layouts keep the first/original well at its saved position. A JSON backup of the original layouts is written to application support before repair. Grid settings cannot crop the well out of bounds.
+
+## Existing features
 
 Catalog cards are compact and include item thumbnails. Main item pictures are selected from the infobox figure, rather than a small universe badge. The image cache supports original-image fallback, retry controls, paced downloads and bundled crop images. Existing cached badge images are repaired on upgrade without clearing personal progress.
 
@@ -12,7 +22,7 @@ Companion cards show location, today's hours and current availability. A filter 
 
 Refresh downloads one shared compressed catalog from GitHub, not thousands of individual wiki requests. GitHub Actions refreshes the source tables every six hours, spaces API requests six seconds apart, limits individual detail-page refreshes to five per run, and respects Retry-After. If collection fails, the last valid published feed remains available. The wiki currently returns HTTP 403 to GitHub-hosted collection attempts; in-app refresh therefore retrieves the last published snapshot, not a guaranteed live copy of the wiki. Source freshness depends on the wiki permitting the collector. Full articles still cache when opened; bulk crawling from the client has been removed.
 
-Farm planner: 50 bundled crop/material pictures, movable Wishing Wells, floating-island bounds of 65x65 planting cells / 130x130 placement units, blocked-cell editing and collision checks. Exact biome masks have not been verified; those dimensions and blocked terrain remain manually configurable.
+Farm planner: 50 bundled crop/material pictures, one movable Wishing Well per layout, floating-island bounds of 65x65 planting cells / 130x130 placement units, blocked-cell editing and collision checks. Exact biome masks have not been verified; those dimensions and blocked terrain remain manually configurable.
 
 ## Updates
 

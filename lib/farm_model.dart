@@ -74,11 +74,14 @@ Map<String, dynamic> newLayout(
   'height': islandNames.contains(template) ? 65 : height,
   'calibrated': islandNames.contains(template),
   'blocked': <int>[],
-  'wells': islandNames.contains(template)
-      ? [
-          {'x': 29, 'y': 29, 'w': 6, 'h': 6},
-        ]
-      : <dynamic>[],
+  'wells': [
+    {
+      'x': ((islandNames.contains(template) ? 65 : width) - 6) ~/ 2,
+      'y': ((islandNames.contains(template) ? 65 : height) - 6) ~/ 2,
+      'w': 6,
+      'h': 6,
+    },
+  ],
   'plots': <dynamic>[],
 };
 void migrateLayout(Map layout) {
@@ -88,6 +91,33 @@ void migrateLayout(Map layout) {
   layout.putIfAbsent('calibrated', () => false);
   layout.putIfAbsent('blocked', () => []);
   layout.putIfAbsent('wells', () => []);
+  // Keep the original movable well, including its saved position.
+  final wells = layout['wells'] as List;
+  if (wells.isNotEmpty) {
+    layout['wells'] = [wells.first];
+  } else {
+    layout['width'] = (layout['width'] as int).clamp(6, 256);
+    layout['height'] = (layout['height'] as int).clamp(6, 256);
+    (int, int)? space;
+    for (int y = 0; y <= layout['height'] - 6 && space == null; y++) {
+      for (int x = 0; x <= layout['width'] - 6; x++) {
+        if (canPlace(layout, x, y, 6, 6) &&
+            !(layout['plots'] as List).any(
+              (p) =>
+                  x < p['x'] + p['w'] &&
+                  x + 6 > p['x'] &&
+                  y < p['y'] + p['h'] &&
+                  y + 6 > p['y'],
+            )) {
+          space = (x, y);
+          break;
+        }
+      }
+    }
+    layout['wells'] = [
+      {'x': space?.$1 ?? 0, 'y': space?.$2 ?? 0, 'w': 6, 'h': 6},
+    ];
+  }
 }
 
 bool canPlace(

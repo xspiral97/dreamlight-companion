@@ -24,6 +24,7 @@ import 'store.dart';
 import 'wiki.dart';
 import 'planner.dart';
 import 'schedule.dart';
+import 'timetable.dart';
 
 String selectedZone = 'Device local';
 DateTime gameNow() => selectedZone == 'Device local'
@@ -76,11 +77,13 @@ class _HomeState extends State<Home> {
       area = 'All areas',
       progress = 'All';
   String companionFilter = 'All companions';
+  bool timetable = false;
+  String eventFilter = 'All dates';
   Map<String, dynamic> owned = {};
   bool syncing = false;
   bool caching = false;
   String status = 'Ready', last = 'Never';
-  String appVersion = '0.3.0', updateStatus = '';
+  String appVersion = '0.4.0', updateStatus = '';
   bool updating = false;
   DateTime? retryAfter;
   Timer? timer;
@@ -544,7 +547,9 @@ class _HomeState extends State<Home> {
       final details = r['details'] == null
           ? <String, dynamic>{}
           : Map<String, dynamic>.from(jsonDecode(r['details'] as String));
-      if (section == 'Companions' && companionFilter != 'All companions') {
+      if (section == 'Companions' &&
+          !timetable &&
+          companionFilter != 'All companions') {
         final state = companionAvailability(details, gameNow());
         if (companionFilter == 'Available now' &&
             state != CompanionAvailability.available) {
@@ -556,6 +561,13 @@ class _HomeState extends State<Home> {
         }
         if (companionFilter == 'No wild schedule' &&
             state != CompanionAvailability.notScheduled) {
+          return false;
+        }
+      }
+      if ((section == 'Events' || section == 'Star Paths') &&
+          eventFilter != 'All dates') {
+        final event = details['event'] as Map?;
+        if (event == null || eventStatus(event, gameNow()) != eventFilter) {
           return false;
         }
       }
@@ -573,6 +585,25 @@ class _HomeState extends State<Home> {
           (progress == 'All' ||
               (owned[id] == true) == (progress == 'Collected'));
     }).toList();
+    if (section == 'Events' || section == 'Star Paths') {
+      const order = [
+        'Current',
+        'Upcoming',
+        'Permanent',
+        'Dates not specified',
+        'Past',
+      ];
+      filtered.sort((a, b) {
+        final left = jsonDecode(a['details'] as String)['event'] as Map? ?? {};
+        final right = jsonDecode(b['details'] as String)['event'] as Map? ?? {};
+        final result = order
+            .indexOf(eventStatus(left, gameNow()))
+            .compareTo(order.indexOf(eventStatus(right, gameNow())));
+        return result != 0
+            ? result
+            : (a['title'] as String).compareTo(b['title'] as String);
+      });
+    }
     return Column(
       children: [
         Padding(
@@ -593,7 +624,40 @@ class _HomeState extends State<Home> {
                 ),
               ),
               const SizedBox(height: 12),
-              if (section == 'Companions')
+              if (section == 'Characters' || section == 'Companions')
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: SegmentedButton<bool>(
+                    segments: const [
+                      ButtonSegment(
+                        value: false,
+                        label: Text('Cards'),
+                        icon: Icon(Icons.grid_view),
+                      ),
+                      ButtonSegment(
+                        value: true,
+                        label: Text('Timetable'),
+                        icon: Icon(Icons.schedule),
+                      ),
+                    ],
+                    selected: {timetable},
+                    onSelectionChanged: (v) =>
+                        setState(() => timetable = v.first),
+                  ),
+                ),
+              if (section == 'Events' || section == 'Star Paths')
+                DropdownButtonFormField<String>(
+                  initialValue: eventFilter,
+                  decoration: const InputDecoration(labelText: 'Event dates'),
+                  items:
+                      ['All dates', 'Current', 'Upcoming', 'Past', 'Permanent']
+                          .map(
+                            (v) => DropdownMenuItem(value: v, child: Text(v)),
+                          )
+                          .toList(),
+                  onChanged: (v) => setState(() => eventFilter = v!),
+                ),
+              if (section == 'Companions' && !timetable)
                 DropdownButtonFormField<String>(
                   initialValue: companionFilter,
                   isExpanded: true,
@@ -644,7 +708,17 @@ class _HomeState extends State<Home> {
           ),
         ),
         Expanded(
-          child: filtered.isEmpty
+          child:
+              timetable && (section == 'Characters' || section == 'Companions')
+              ? ActivityTimetable(
+                  key: ValueKey(section),
+                  rows: filtered,
+                  companions: section == 'Companions',
+                  now: gameNow(),
+                  zone: selectedZone,
+                  onOpen: open,
+                )
+              : filtered.isEmpty
               ? Center(
                   child: Text(
                     rows.isEmpty
@@ -658,6 +732,12 @@ class _HomeState extends State<Home> {
                     maxCrossAxisExtent: 240,
                     mainAxisExtent: section == 'Fish' || section == 'Companions'
                         ? 216
+                        : section == 'Recipes'
+                        ? 184
+                        : section == 'Ingredients' ||
+                              section == 'Events' ||
+                              section == 'Star Paths'
+                        ? 160
                         : 128,
                     crossAxisSpacing: 8,
                     mainAxisSpacing: 8,
@@ -758,13 +838,15 @@ class _EntryPageState extends State<EntryPage> {
     fed = await widget.store.get('fed:${widget.row['id']}:$day', false);
     gifts.text = await widget.store.get('gifts:${widget.row['id']}:$day', '');
     if (data == null ||
-        (data?['summary'] == true &&
+        (data?['referenceComplete'] != true &&
+            data?['summary'] == true &&
             data?['fishing'] == null &&
             data?['companion'] == null) ||
-        DateTime.now().difference(
-              DateTime.tryParse(data?['fetchedAt'] ?? '') ?? DateTime(2000),
-            ) >
-            const Duration(days: 1)) {
+        (data?['referenceComplete'] != true &&
+            DateTime.now().difference(
+                  DateTime.tryParse(data?['fetchedAt'] ?? '') ?? DateTime(2000),
+                ) >
+                const Duration(days: 1))) {
       await refresh();
     } else if (mounted) {
       setState(() {});
@@ -805,8 +887,12 @@ class _EntryPageState extends State<EntryPage> {
             icon: const Icon(Icons.refresh),
           ),
           IconButton(
-            onPressed: () =>
-                launchUrl(Uri.parse('${Wiki.base}/?curid=${widget.row['id']}')),
+            onPressed: () => launchUrl(
+              Uri.parse(Wiki.base).replace(
+                path:
+                    '/${(widget.row['title'] as String).replaceAll(' ', '_')}',
+              ),
+            ),
             icon: const Icon(Icons.open_in_new),
           ),
         ],
