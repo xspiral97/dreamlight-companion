@@ -2,16 +2,17 @@
 
 Unofficial Flutter companion for Disney Dreamlight Valley on Windows, Android and macOS. English interface; SQLite data stays on your device. No account or game-save modification.
 
-## Version 0.2.1
+## Version 0.3.0
 
-- Crop planner includes 50 bundled crop/material pictures (regular plantable ingredients, seasonal Spring V-EGG-etable and Cotton), plus the actual Wishing Well icon. New seed-grown ingredients and image URLs are discovered by wiki refresh.
-- Floating islands use 65×65 planting cells, with an optional 130×130 placement subgrid. A well occupies 6×6 planting cells (12×12 placement units). Its initial position is an editable planning marker.
-- Other biome names are available as map labels with user-measured dimensions. **Exact biome boundaries and blocked terrain masks have not been verified or bundled.** Configure dimensions and mark blocked cells to match your map. Do not treat the legacy 32×32 grid as a measured game map.
-- Blocked cells and well footprints reject crop placement, resizing and dragging. Existing layouts keep their original dimensions and coordinates. Backup validation supports variable map sizes.
-- Refresh uses rendered collection pages instead of the allpages generator that was returning HTTP 403. All 16 current collection sources were verified live (8,433 collection memberships; shared entries use the same page ID). Successful sources are saved independently; a failed source preserves old data and appears in the status. Automatic failed retries are throttled to one hour.
-- A bundled catalog starts offline. Full page text downloads when opened; detail packs can be cached from Settings. Pictures of the 50 bundled crops and well work offline; other images cache on demand. All text and image attribution is in ATTRIBUTION.md.
+Catalog cards are compact and include item thumbnails. Main item pictures are selected from the infobox figure, rather than a small universe badge. The image cache supports original-image fallback, retry controls, paced downloads and bundled crop images. Existing cached badge images are repaired on upgrade without clearing personal progress.
 
-Shared items retain membership in multiple collections (for example, crafted furniture remains visible in both Crafting and Furniture).
+Fish cards and detail panels include ripple color, weather, time, locations and other catch/unlock conditions. The offline dataset contains all 71 Fish-collection entries. If the source specifies no restriction, the interface says no restriction is listed rather than inventing a condition.
+
+Companion cards show location, today's hours and current availability. A filter shows only companions available now, unavailable companions, or companions without a wild appearance schedule. The dataset contains 90 scheduled wild variants. Full weekly schedules use the configured game time zone, update each minute and distinguish an unknown schedule from a known absence.
+
+Refresh downloads one shared compressed catalog from GitHub, not thousands of individual wiki requests. GitHub Actions refreshes the source tables every six hours, spaces API requests six seconds apart, limits individual detail-page refreshes to five per run, and respects Retry-After. If collection fails, the last valid published feed remains available. Full articles still cache when opened; bulk crawling from the client has been removed.
+
+Farm planner: 50 bundled crop/material pictures, movable Wishing Wells, floating-island bounds of 65x65 planting cells / 130x130 placement units, blocked-cell editing and collision checks. Exact biome masks have not been verified; those dimensions and blocked terrain remain manually configurable.
 
 ## Updates
 

@@ -1,4 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
+
+import 'catalog_data.dart';
+import 'item_image.dart';
+import 'wiki_http.dart';
 
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html;
@@ -10,7 +15,8 @@ import 'catalog_parser.dart';
 
 class Wiki {
   final Store store;
-  Wiki(this.store, {http.Client? client}) : client = client ?? http.Client();
+  Wiki(this.store, {http.Client? client})
+    : client = client ?? WikiPacedClient();
   static const base = 'https://dreamlightvalleywiki.com';
   final http.Client client;
   Future<Map<String, dynamic>> api(Map<String, String> params) async {
@@ -24,6 +30,11 @@ class Wiki {
           },
         )
         .timeout(const Duration(seconds: 45));
+    if (response.statusCode == 429) {
+      throw Exception(
+        'The wiki is rate-limiting page requests. Catalog refresh uses the shared feed; wait before retrying this page.',
+      );
+    }
     if (response.statusCode != 200) {
       throw Exception(
         response.statusCode == 403
@@ -36,120 +47,49 @@ class Wiki {
     return result;
   }
 
+  static const feedUrl =
+      'https://raw.githubusercontent.com/xspiral97/dreamlight-companion/main/data/catalog.json.gz';
   Future<SyncReport> sync(void Function(String) report) async {
-    final sources = <String>{
-      'Memories',
-      'Characters',
-      'Crafting',
-      'Companions',
-      'Fish',
-      'Foraging',
-      'Ingredients',
-      'Meals',
-      'Gems',
-      'Clothing Sets',
-      'Furniture Sets',
-      'Timebending',
-      'Board Game',
-      'Snippets',
-      'Mounts',
-      'Exhibition',
-    };
-    try {
-      final hub = await api({
-        'action': 'parse',
-        'page': 'Collections',
-        'prop': 'text',
-      });
-      for (final card
-          in html
-              .parse(hub['parse']['text']['*'])
-              .querySelectorAll('[data-ct-section]')) {
-        final name = card.attributes['data-ct-section'];
-        if (name != null && name.isNotEmpty) sources.add(name);
-      }
-    } catch (_) {
-      /* Use the established collection pages if discovery is temporarily unavailable. */
-    }
-    final knownCategories = <String, Set<String>>{};
-    for (final row in await store.catalog()) {
-      knownCategories[row['id'] as String] = (jsonDecode(
-        row['categories'] as String,
-      ) as List).cast<String>().toSet();
-    }
-    final failures = <String>[];
-    int records = 0, successful = 0;
-    for (final source in sources) {
-      report(
-        'Refreshing $source ($successful/${sources.length} sources) · $records entries',
+    report('Downloading shared catalog (one request; no wiki crawl)...');
+    final response = await client
+        .get(Uri.parse(feedUrl))
+        .timeout(const Duration(seconds: 60));
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Catalog feed HTTP ${response.statusCode}. Your cached catalog is unchanged.',
       );
-      try {
-        final data = await api({
-          'action': 'parse',
-          'page': 'Collections/$source',
-          'prop': 'text',
-        });
-        final entries = parseCollection(source, data['parse']['text']['*']);
-        if (entries.isEmpty) {
-          throw const FormatException('Unrecognized collection structure');
-        }
-        await store.db.transaction((t) async {
-          final batch = t.batch();
-          for (final row in entries) {
-            final id = row['id'] as String;
-            final combined = knownCategories.putIfAbsent(id, () => {});
-            combined.addAll(
-              (jsonDecode(row['categories'] as String) as List).cast<String>(),
-            );
-            row['categories'] = jsonEncode(combined.toList());
-            batch.rawInsert(
-              'INSERT INTO catalog(id,title,categories,details) VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET title=excluded.title,categories=excluded.categories,details=COALESCE(catalog.details,excluded.details)',
-              [row['id'], row['title'], row['categories'], row['details']],
-            );
-          }
-          await batch.commit(noResult: true);
-        });
-        successful++;
-        records += entries.length;
-      } catch (e) {
-        failures.add('$source: $e');
-      }
-      await Future<void>.delayed(const Duration(milliseconds: 250));
     }
-    try {
-      final ingredients = await api({
-        'action': 'parse',
-        'page': 'Ingredients',
-        'prop': 'text',
-      });
-      final crops = parsePlantableIngredients(
-        ingredients['parse']['text']['*'],
-      );
-      if (crops.isEmpty) throw const FormatException('Unrecognized crop table');
-      await store.db.insert('meta', {
-        'key': 'plantableCrops',
-        'value': jsonEncode(crops),
-      }, conflictAlgorithm: ConflictAlgorithm.replace);
-    } catch (e) {
-      failures.add('Plantable ingredients: $e');
+    final bytes = response.bodyBytes;
+    if (bytes.length > 25 * 1024 * 1024) {
+      throw const FormatException('Catalog feed is too large');
     }
-    final result = SyncReport(successful, records, failures);
+    final decoded = bytes.length > 2 && bytes[0] == 31 && bytes[1] == 139
+        ? gzip.decode(bytes)
+        : bytes;
+    if (decoded.length > 100 * 1024 * 1024) {
+      throw const FormatException('Expanded catalog is too large');
+    }
+    final snapshot = validateCatalogSnapshot(jsonDecode(utf8.decode(decoded)));
+    report('Saving ${snapshot['records'].length} catalog entries...');
+    await store.importCatalog(snapshot);
+    final date = DateTime.now().toUtc().toIso8601String();
+    final failures = (snapshot['failures'] as List? ?? [])
+        .map((s) => s.toString())
+        .toList();
+    final result = SyncReport(
+      (snapshot['sources'] as List).length,
+      (snapshot['records'] as List).length,
+      failures,
+    );
+    await store.db.insert('meta', {
+      'key': 'lastSync',
+      'value': date,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
     await store.db.insert('meta', {
       'key': 'syncReport',
-      'value': result.toString(),
+      'value': '$result Data published ${snapshot['generatedAt']}.',
     }, conflictAlgorithm: ConflictAlgorithm.replace);
-    if (successful == 0) {
-      throw Exception(
-        'No wiki sources could be refreshed. ${failures.take(2).join('; ')}',
-      );
-    }
-    if (failures.isEmpty) {
-      await store.db.insert('meta', {
-        'key': 'lastSync',
-        'value': DateTime.now().toUtc().toIso8601String(),
-      }, conflictAlgorithm: ConflictAlgorithm.replace);
-    }
-    report(result.toString());
+    report('$result Data published ${snapshot['generatedAt']}.');
     return result;
   }
 
@@ -179,7 +119,7 @@ class Wiki {
             .replaceAll(RegExp(r'\s+'), ' ');
       }
     }
-    final image = doc.querySelector('#infobox-image img')?.attributes['src'];
+    final image = itemImage(doc);
     final blocks = <Map<String, String>>[];
     for (final el in doc.querySelectorAll(
       '.mw-parser-output > p, .mw-parser-output > h2, .mw-parser-output > h3, .mw-parser-output > ul, .mw-parser-output > ol, .mw-parser-output > table',
@@ -200,15 +140,54 @@ class Wiki {
         .map((a) => a.attributes['title']!)
         .toSet()
         .toList();
+    final previous = row['details'] == null
+        ? <String, dynamic>{}
+        : Map<String, dynamic>.from(jsonDecode(row['details'] as String));
     final result = <String, dynamic>{
-      'schedule': parseSchedule(doc),
-      'fields': fields,
+      ...previous,
+      'metadataVersion': 2,
+      'summary': false,
+      'schedule': parseSchedule(doc).isNotEmpty
+          ? parseSchedule(doc)
+          : previous['schedule'] ?? [],
+      'fields': {...?(previous['fields'] as Map?), ...fields},
       'image': image == null ? null : Uri.parse(base).resolve(image).toString(),
       'blocks': blocks,
       'links': links,
       'fetchedAt': DateTime.now().toUtc().toIso8601String(),
       'revision': data['parse']['revid'],
     };
+    if (previous['fishing'] is Map || fields.containsKey('Ripple Color:')) {
+      final previousFish = Map<String, dynamic>.from(previous['fishing'] ?? {});
+      final paragraphs = doc
+          .querySelectorAll('.mw-parser-output > p')
+          .take(5)
+          .map((p) => p.text.trim().replaceAll(RegExp(r'\s+'), ' '))
+          .toList();
+      final timeParagraph = paragraphs
+          .where(
+            (p) => RegExp(r'\d\s*(am|pm)', caseSensitive: false).hasMatch(p),
+          )
+          .join(' ');
+      final ranges = RegExp(
+        r'(\d{1,2}(?::\d{2})?\s*(?:am|pm))\s*(?:-|–|to|and)\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm))',
+        caseSensitive: false,
+      ).allMatches(timeParagraph).map((m) => '${m[1]} – ${m[2]}').join('; ');
+      result['fishing'] = {
+        ...previousFish,
+        'ripples':
+            fields['Ripple Color:'] ?? previousFish['ripples'] ?? 'Unknown',
+        'weather':
+            fields['Weather:'] ??
+            previousFish['weather'] ??
+            'No weather restriction listed',
+        'locations': fields['Found:'] ?? previousFish['locations'] ?? 'Unknown',
+        'time': ranges.isEmpty
+            ? previousFish['time'] ?? 'No time restriction listed'
+            : ranges,
+        'conditions': paragraphs.join('\n\n'),
+      };
+    }
     await store.db.update(
       'catalog',
       {'details': jsonEncode(result)},

@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'catalog_data.dart';
+
 import 'package:flutter/services.dart';
 
 import 'package:sqflite/sqflite.dart' as mobile;
@@ -24,10 +26,15 @@ class Store {
     }
     db = await openDatabase(
       p.join(home.path, 'companion.db'),
-      version: 1,
+      version: 2,
+      onUpgrade: (d, old, newVersion) async {
+        if (old < 2) {
+          await d.execute('ALTER TABLE catalog ADD COLUMN image TEXT');
+        }
+      },
       onCreate: (d, v) async {
         await d.execute(
-          'CREATE TABLE catalog(id TEXT PRIMARY KEY, title TEXT, categories TEXT, details TEXT)',
+          'CREATE TABLE catalog(id TEXT PRIMARY KEY, title TEXT, categories TEXT, details TEXT, image TEXT)',
         );
         await d.execute(
           'CREATE TABLE personal(key TEXT PRIMARY KEY, value TEXT)',
@@ -38,20 +45,60 @@ class Store {
   }
 
   Future<void> seedCatalog() async {
-    final count = await db.rawQuery('SELECT COUNT(*) AS n FROM catalog');
-    if ((count.first['n'] as int) > 0) return;
+    final seeded = await db.query(
+      'meta',
+      where: 'key=?',
+      whereArgs: ['catalogMetadataVersion'],
+    );
+    if (seeded.isNotEmpty && seeded.first['value'] == '2') return;
     final snapshot = jsonDecode(
       await rootBundle.loadString('assets/catalog.json'),
     );
+    await importCatalog(snapshot);
+    await db.insert('meta', {
+      'key': 'catalogMetadataVersion',
+      'value': '2',
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<void> importCatalog(dynamic input) async {
+    final snapshot = validateCatalogSnapshot(input);
+    final existing = {
+      for (final row in await catalog()) row['id'] as String: row,
+    };
     await db.transaction((t) async {
       final batch = t.batch();
-      for (final row in snapshot['records']) {
-        batch.insert(
-          'catalog',
-          Map<String, Object?>.from(row),
-          conflictAlgorithm: ConflictAlgorithm.ignore,
+      for (final raw in snapshot['records']) {
+        final row = Map<String, Object?>.from(raw);
+        final old = existing[row['id']];
+        final details = mergeCatalogDetails(
+          old?['details'] as String?,
+          row['details'] as String,
         );
+        final categories = {
+          ...?(old == null
+              ? null
+              : (jsonDecode(old['categories'] as String) as List)),
+          ...(jsonDecode(row['categories'] as String) as List),
+        };
+        batch.insert('catalog', {
+          'id': row['id'],
+          'title': row['title'],
+          'categories': jsonEncode(categories.toList()),
+          'image': row['image'] ?? details['image'],
+          'details': jsonEncode(details),
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
       }
+      if (snapshot['plantableCrops'] is List) {
+        batch.insert('meta', {
+          'key': 'plantableCrops',
+          'value': jsonEncode(snapshot['plantableCrops']),
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+      batch.insert('meta', {
+        'key': 'catalogGeneratedAt',
+        'value': snapshot['generatedAt'] ?? 'Unknown',
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
       await batch.commit(noResult: true);
     });
   }

@@ -13,7 +13,10 @@ import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+
+import 'item_image.dart';
+import 'catalog_card.dart';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -32,6 +35,7 @@ Future<void> main() async {
   final store = Store();
   await store.open();
   await store.seedCatalog();
+  await initializeItemImages();
   selectedZone = await store.get('timezone', 'Device local');
   runApp(CompanionApp(store: store));
 }
@@ -71,11 +75,12 @@ class _HomeState extends State<Home> {
       query = '',
       area = 'All areas',
       progress = 'All';
+  String companionFilter = 'All companions';
   Map<String, dynamic> owned = {};
   bool syncing = false;
   bool caching = false;
   String status = 'Ready', last = 'Never';
-  String appVersion = '0.2.1', updateStatus = '';
+  String appVersion = '0.3.0', updateStatus = '';
   bool updating = false;
   DateTime? retryAfter;
   Timer? timer;
@@ -157,37 +162,24 @@ class _HomeState extends State<Home> {
   }
 
   Future<void> cacheDetails({bool companionsOnly = false}) async {
-    if (caching) return;
+    if (caching || syncing) return;
     setState(() => caching = true);
-    final targets = rows
-        .where(
-          (r) =>
-              !companionsOnly ||
-              sectionFor(r['title'] as String, r['categories'] as String) ==
-                  'Companions',
-        )
-        .toList();
-    int failed = 0;
-    for (int i = 0; i < targets.length && mounted && caching; i++) {
-      try {
-        await wiki.details(targets[i]);
-      } catch (e) {
-        failed++;
-      }
-      if (mounted) {
-        setState(
-          () => status =
-              'Offline details: ${i + 1}/${targets.length}; failures: $failed',
-        );
-      }
-      await Future<void>.delayed(const Duration(milliseconds: 300));
-    }
-    final updated = await widget.store.catalog();
-    if (mounted) {
-      setState(() {
-        rows = updated;
-        caching = false;
+    try {
+      final report = await wiki.sync((s) {
+        if (mounted) setState(() => status = s);
       });
+      final updated = await widget.store.catalog();
+      if (mounted) {
+        setState(() {
+          rows = updated;
+          status = report.toString();
+          last = DateTime.now().toUtc().toIso8601String();
+        });
+      }
+    } catch (e) {
+      message('Reference refresh failed: $e');
+    } finally {
+      if (mounted) setState(() => caching = false);
     }
   }
 
@@ -510,17 +502,12 @@ class _HomeState extends State<Home> {
             onPressed: caching
                 ? null
                 : () => cacheDetails(companionsOnly: true),
-            child: const Text('Download companion details'),
+            child: const Text('Refresh companion schedules'),
           ),
           OutlinedButton(
             onPressed: caching ? null : () => cacheDetails(),
-            child: const Text('Download all offline details'),
+            child: const Text('Refresh offline reference data'),
           ),
-          if (caching)
-            TextButton(
-              onPressed: () => setState(() => caching = false),
-              child: const Text('Stop download'),
-            ),
           OutlinedButton(onPressed: backup, child: const Text('Export backup')),
           OutlinedButton(
             onPressed: restore,
@@ -530,7 +517,7 @@ class _HomeState extends State<Home> {
       ),
       const SizedBox(height: 24),
       const Text(
-        'Catalog pages are discovered automatically. Open an entry online to download its full details for offline reading. Unknown fields are left unspecified. Personal progress is entered manually.',
+        'Catalog refresh downloads one shared dataset from GitHub. Fish conditions and companion schedules are included offline. Full wiki articles cache when opened individually. Personal progress is entered manually.',
       ),
       const SizedBox(height: 24),
       const Text(
@@ -554,6 +541,24 @@ class _HomeState extends State<Home> {
       }
     }
     final filtered = rows.where((r) {
+      final details = r['details'] == null
+          ? <String, dynamic>{}
+          : Map<String, dynamic>.from(jsonDecode(r['details'] as String));
+      if (section == 'Companions' && companionFilter != 'All companions') {
+        final state = companionAvailability(details, gameNow());
+        if (companionFilter == 'Available now' &&
+            state != CompanionAvailability.available) {
+          return false;
+        }
+        if (companionFilter == 'Not available now' &&
+            state != CompanionAvailability.unavailable) {
+          return false;
+        }
+        if (companionFilter == 'No wild schedule' &&
+            state != CompanionAvailability.notScheduled) {
+          return false;
+        }
+      }
       final id = r['id'] as String;
       return matchesSection(
             section,
@@ -588,6 +593,26 @@ class _HomeState extends State<Home> {
                 ),
               ),
               const SizedBox(height: 12),
+              if (section == 'Companions')
+                DropdownButtonFormField<String>(
+                  initialValue: companionFilter,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Appearance availability',
+                  ),
+                  items:
+                      [
+                            'All companions',
+                            'Available now',
+                            'Not available now',
+                            'No wild schedule',
+                          ]
+                          .map(
+                            (v) => DropdownMenuItem(value: v, child: Text(v)),
+                          )
+                          .toList(),
+                  onChanged: (v) => setState(() => companionFilter = v!),
+                ),
               Row(
                 children: [
                   Expanded(
@@ -629,11 +654,13 @@ class _HomeState extends State<Home> {
                 )
               : GridView.builder(
                   padding: const EdgeInsets.all(20),
-                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: 340,
-                    mainAxisExtent: 195,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
+                  gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 240,
+                    mainAxisExtent: section == 'Fish' || section == 'Companions'
+                        ? 216
+                        : 128,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
                   ),
                   itemCount: filtered.length,
                   itemBuilder: (c, i) {
@@ -643,64 +670,16 @@ class _HomeState extends State<Home> {
                     final cached = r['details'] == null
                         ? null
                         : jsonDecode(r['details'] as String);
-                    return Card(
-                      clipBehavior: Clip.antiAlias,
-                      child: InkWell(
-                        onTap: () => open(r),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.auto_awesome_outlined,
-                                    color: Color(0xFFE7C681),
-                                  ),
-                                  const Spacer(),
-                                  Checkbox(
-                                    value: owned[r['id']] == true,
-                                    onChanged: (v) =>
-                                        toggle(r['id'] as String, v!),
-                                  ),
-                                ],
-                              ),
-                              Text(
-                                r['title'] as String,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              if (cached != null &&
-                                  (cached['schedule'] as List? ?? [])
-                                      .isNotEmpty)
-                                Text(
-                                  availability(cached['schedule'], gameNow()),
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Color(0xFF98CFAD),
-                                  ),
-                                ),
-                              const SizedBox(height: 6),
-                              Expanded(
-                                child: Text(
-                                  cats.isEmpty ? 'Guide' : cats,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.white54,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                    return CatalogCard(
+                      title: r['title'] as String,
+                      categories: cats,
+                      section: section,
+                      data: Map<String, dynamic>.from(cached ?? {}),
+                      image: r['image'] as String? ?? cached?['image'],
+                      now: gameNow(),
+                      collected: owned[r['id']] == true,
+                      onOpen: () => open(r),
+                      onCollected: (v) => toggle(r['id'] as String, v),
                     );
                   },
                 ),
@@ -724,6 +703,8 @@ class _HomeState extends State<Home> {
         ),
       ),
     );
+    final updated = await widget.store.catalog();
+    if (mounted) setState(() => rows = updated);
   }
 }
 
@@ -748,6 +729,7 @@ class _EntryPageState extends State<EntryPage> {
   String? error;
   bool loading = false, fed = false;
   final gifts = TextEditingController();
+  Timer? clock;
   String get day {
     final d = gameNow();
     return '${d.year}-${d.month}-${d.day}';
@@ -756,6 +738,9 @@ class _EntryPageState extends State<EntryPage> {
   @override
   void initState() {
     super.initState();
+    clock = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() {});
+    });
     if (widget.row['details'] != null) {
       data = jsonDecode(widget.row['details'] as String);
     }
@@ -764,6 +749,7 @@ class _EntryPageState extends State<EntryPage> {
 
   @override
   void dispose() {
+    clock?.cancel();
     gifts.dispose();
     super.dispose();
   }
@@ -772,7 +758,9 @@ class _EntryPageState extends State<EntryPage> {
     fed = await widget.store.get('fed:${widget.row['id']}:$day', false);
     gifts.text = await widget.store.get('gifts:${widget.row['id']}:$day', '');
     if (data == null ||
-        data?['summary'] == true ||
+        (data?['summary'] == true &&
+            data?['fishing'] == null &&
+            data?['companion'] == null) ||
         DateTime.now().difference(
               DateTime.tryParse(data?['fetchedAt'] ?? '') ?? DateTime(2000),
             ) >
@@ -787,7 +775,12 @@ class _EntryPageState extends State<EntryPage> {
     setState(() => loading = true);
     try {
       final d = await widget.wiki.details(widget.row);
-      if (mounted) setState(() => data = d);
+      if (mounted) {
+        setState(() {
+          data = d;
+          error = null;
+        });
+      }
     } catch (e) {
       if (mounted) setState(() => error = 'Details unavailable: $e');
     } finally {
@@ -798,6 +791,11 @@ class _EntryPageState extends State<EntryPage> {
   @override
   Widget build(BuildContext context) {
     final fields = data?['fields'] as Map? ?? {};
+    final currentData = data ?? <String, dynamic>{};
+    final imageUrl =
+        currentData['metadataVersion'] == 2 && currentData['summary'] != true
+        ? currentData['image']
+        : (widget.row['image'] ?? currentData['image']);
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.row['title'] as String),
@@ -818,17 +816,17 @@ class _EntryPageState extends State<EntryPage> {
         children: [
           if (loading) const LinearProgressIndicator(),
           if (error != null) Text(error!),
-          if (data?['image'] != null)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: CachedNetworkImage(
-                imageUrl: data!['image'],
-                height: 160,
-                errorWidget: (_, e, s) => const Icon(Icons.image_not_supported),
-              ),
-            ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: ItemImage(url: imageUrl as String?, size: 160),
+          ),
+          if (data?['fishing'] is Map)
+            FishingConditions(conditions: data!['fishing']),
+          if (data?['companion'] is Map)
+            CompanionSchedule(data: data!, now: gameNow()),
           const SizedBox(height: 16),
-          if ((data?['schedule'] as List? ?? []).isNotEmpty)
+          if (data?['companion'] == null &&
+              (data?['schedule'] as List? ?? []).isNotEmpty)
             Text(
               availability(data!['schedule'], gameNow()),
               style: const TextStyle(fontSize: 22, color: Color(0xFF98CFAD)),

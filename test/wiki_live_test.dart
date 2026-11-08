@@ -40,21 +40,27 @@ void main() {
       dir.deleteSync(recursive: true);
     }
   }, skip: !const bool.fromEnvironment('LIVE_WIKI'));
-  test('live collection refresh imports the current catalog', () async {
-    final dir = Directory.systemTemp.createTempSync('wiki-full-sync-');
-    final store = Store();
-    await store.open(directory: dir);
-    final wiki = Wiki(store);
-    try {
-      final report = await wiki.sync((_) {});
-      expect(report.failures, isEmpty);
-      expect(report.sources, 16);
-      expect(report.records, greaterThan(7900));
-      expect((await store.catalog()).length, greaterThan(7500));
-    } finally {
-      wiki.client.close();
-      await store.db.close();
-      dir.deleteSync(recursive: true);
-    }
-  }, skip: !const bool.fromEnvironment('LIVE_WIKI'));
+  test(
+    'live collection refresh imports the current catalog',
+    () async {
+      final dir = Directory.systemTemp.createTempSync('wiki-full-sync-');
+      final store = Store();
+      await store.open(directory: dir);
+      final wiki = Wiki(store);
+      try {
+        final report = await wiki.sync((_) {});
+        expect(report.failures, isEmpty);
+        expect(report.sources, 16);
+        expect(report.records, greaterThan(7900));
+        expect((await store.catalog()).length, greaterThan(7500));
+      } finally {
+        wiki.client.close();
+        await store.db.close();
+        dir.deleteSync(recursive: true);
+      }
+    },
+    skip:
+        !(const bool.fromEnvironment('LIVE_WIKI') ||
+            const bool.fromEnvironment('LIVE_CATALOG')),
+  );
 }
