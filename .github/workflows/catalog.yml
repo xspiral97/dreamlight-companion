@@ -24,8 +24,14 @@ jobs:
           restore-keys: wiki-source-v2-
       - run: python -m pip install beautifulsoup4==4.12.2
       - name: Collect paced wiki tables and a bounded number of detail pages
+        id: collect
+        continue-on-error: true
         run: python scripts/build-catalog.py --refresh-collections
+      - name: Keep the previous snapshot when the source refuses collection
+        if: steps.collect.outcome != 'success'
+        run: echo '::warning::Wiki access was refused or its structure changed. The previous catalog remains published; no new source data was published.'
       - name: Publish validated data feed
+        if: steps.collect.outcome == 'success'
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
