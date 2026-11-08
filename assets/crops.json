@@ -1,0 +1,402 @@
+[
+  {
+    "name": "Asparagus",
+    "image": "assets/crops/asparagus.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/4/45/Asparagus.png/50px-Asparagus.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Frosted Heights",
+    "growth": "2 h 15 m"
+  },
+  {
+    "name": "Bell Pepper",
+    "image": "assets/crops/bell_pepper.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/e/e2/Bell_Pepper.png/50px-Bell_Pepper.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Forest of Valor",
+    "growth": "15 m"
+  },
+  {
+    "name": "Carrot",
+    "image": "assets/crops/carrot.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/c/c3/Carrot.png/50px-Carrot.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Peaceful Meadow",
+    "growth": "15 m"
+  },
+  {
+    "name": "Chili Pepper",
+    "image": "assets/crops/chili_pepper.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/a/ab/Chili_Pepper.png/50px-Chili_Pepper.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Sunlit Plateau",
+    "growth": "45 m"
+  },
+  {
+    "name": "Corn",
+    "image": "assets/crops/corn.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/f/f8/Corn.png/50px-Corn.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Dazzle Beach",
+    "growth": "12 m"
+  },
+  {
+    "name": "Cucumber",
+    "image": "assets/crops/cucumber.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/5/59/Cucumber.png/50px-Cucumber.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Frosted Heights",
+    "growth": "1 h 15 m"
+  },
+  {
+    "name": "Eggplant",
+    "image": "assets/crops/eggplant.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/8/8f/Eggplant.png/50px-Eggplant.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Frosted Heights",
+    "growth": "3 h"
+  },
+  {
+    "name": "Leek",
+    "image": "assets/crops/leek.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/5/57/Leek.png/50px-Leek.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Forgotten Lands",
+    "growth": "2 h"
+  },
+  {
+    "name": "Lettuce",
+    "image": "assets/crops/lettuce.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/d/da/Lettuce.png/50px-Lettuce.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Peaceful Meadow",
+    "growth": "3 m"
+  },
+  {
+    "name": "Okra",
+    "image": "assets/crops/okra.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/e/e7/Okra.png/50px-Okra.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Glade of Trust",
+    "growth": "2 h"
+  },
+  {
+    "name": "Onion",
+    "image": "assets/crops/onion.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/5/51/Onion.png/50px-Onion.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Forest of Valor",
+    "growth": "1 h 15 m"
+  },
+  {
+    "name": "Potato",
+    "image": "assets/crops/potato.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/c/c2/Potato.png/50px-Potato.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Forgotten Lands",
+    "growth": "35 m"
+  },
+  {
+    "name": "Pumpkin",
+    "image": "assets/crops/pumpkin.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/6/64/Pumpkin.png/50px-Pumpkin.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Forgotten Lands",
+    "growth": "4 h"
+  },
+  {
+    "name": "Spinach",
+    "image": "assets/crops/spinach.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/6/60/Spinach.png/50px-Spinach.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Glade of Trust",
+    "growth": "1 h"
+  },
+  {
+    "name": "Tomato",
+    "image": "assets/crops/tomato.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/9/9d/Tomato.png/50px-Tomato.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Dazzle Beach",
+    "growth": "25 m"
+  },
+  {
+    "name": "Zucchini",
+    "image": "assets/crops/zucchini.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/f/f6/Zucchini.png/50px-Zucchini.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Sunlit Plateau",
+    "growth": "40 m"
+  },
+  {
+    "name": "Rice",
+    "image": "assets/crops/rice.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/d/da/Rice.png/50px-Rice.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Glade of Trust",
+    "growth": "50 m"
+  },
+  {
+    "name": "Wheat",
+    "image": "assets/crops/wheat.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/e/e2/Wheat.png/50px-Wheat.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Peaceful Meadow",
+    "growth": "1 m"
+  },
+  {
+    "name": "Canola",
+    "image": "assets/crops/canola.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/7/79/Canola.png/50px-Canola.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Forest of Valor",
+    "growth": "35 m"
+  },
+  {
+    "name": "Soya",
+    "image": "assets/crops/soya.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/0/00/Soya.png/50px-Soya.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Sunlit Plateau",
+    "growth": "1 h 30 m"
+  },
+  {
+    "name": "Sugarcane",
+    "image": "assets/crops/sugarcane.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/0/03/Sugarcane.png/50px-Sugarcane.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Dazzle Beach",
+    "growth": "7 m"
+  },
+  {
+    "name": "Beans",
+    "image": "assets/crops/beans.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/9/9f/Beans.png/50px-Beans.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Glittering Dunes",
+    "growth": "1 h"
+  },
+  {
+    "name": "Broccoli",
+    "image": "assets/crops/broccoli.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/f/f1/Broccoli.png/50px-Broccoli.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Glittering Dunes",
+    "growth": "40 m"
+  },
+  {
+    "name": "Cabbage",
+    "image": "assets/crops/cabbage.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/c/cc/Cabbage.png/50px-Cabbage.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Wild Tangle",
+    "growth": "1 h"
+  },
+  {
+    "name": "Celery",
+    "image": "assets/crops/celery.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/a/a7/Celery.png/50px-Celery.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Ancient's Landing",
+    "growth": "10 m"
+  },
+  {
+    "name": "Flute Root",
+    "image": "assets/crops/flute_root.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/6/6c/Flute_Root.png/50px-Flute_Root.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Glittering Dunes",
+    "growth": "1 h 15 m"
+  },
+  {
+    "name": "Ruby Lentils",
+    "image": "assets/crops/ruby_lentils.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/9/95/Ruby_Lentils.png/50px-Ruby_Lentils.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Wild Tangle",
+    "growth": "2 h"
+  },
+  {
+    "name": "Turnip",
+    "image": "assets/crops/turnip.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/b/b7/Turnip.png/50px-Turnip.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Wild Tangle",
+    "growth": "4 h"
+  },
+  {
+    "name": "Yam",
+    "image": "assets/crops/yam.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/5/52/Yam.png/50px-Yam.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Ancient's Landing",
+    "growth": "4 h"
+  },
+  {
+    "name": "Cosmic Figs",
+    "image": "assets/crops/cosmic_figs.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/9/98/Cosmic_Figs.png/47px-Cosmic_Figs.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Ancient's Landing",
+    "growth": "25 m"
+  },
+  {
+    "name": "Grapes",
+    "image": "assets/crops/grapes.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/3/39/Grapes.png/50px-Grapes.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Ancient's Landing",
+    "growth": "20 m"
+  },
+  {
+    "name": "Melon",
+    "image": "assets/crops/melon.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/1/19/Melon.png/50px-Melon.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Glittering Dunes",
+    "growth": "30 m"
+  },
+  {
+    "name": "Pineapple",
+    "image": "assets/crops/pineapple.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/f/fb/Pineapple.png/28px-Pineapple.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Wild Tangle",
+    "growth": "3 h"
+  },
+  {
+    "name": "Cauliflower",
+    "image": "assets/crops/cauliflower.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/a/aa/Cauliflower.png/50px-Cauliflower.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "The Bind",
+    "growth": "10 m"
+  },
+  {
+    "name": "Green Beans",
+    "image": "assets/crops/green_beans.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/7/72/Green_Beans.png/50px-Green_Beans.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Everafter",
+    "growth": "4 h"
+  },
+  {
+    "name": "Radicchio",
+    "image": "assets/crops/radicchio.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/d/db/Radicchio.png/50px-Radicchio.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Mythopia",
+    "growth": "1 h"
+  },
+  {
+    "name": "Radish",
+    "image": "assets/crops/radish.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/d/d5/Radish.png/50px-Radish.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Everafter",
+    "growth": "1 h 55 m"
+  },
+  {
+    "name": "Ring Squash",
+    "image": "assets/crops/ring_squash.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/a/a1/Ring_Squash.png/50px-Ring_Squash.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "The Bind",
+    "growth": "30 m"
+  },
+  {
+    "name": "Honeydew Melon",
+    "image": "assets/crops/honeydew_melon.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/a/ac/Honeydew_Melon.png/50px-Honeydew_Melon.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Mythopia",
+    "growth": "45 m"
+  },
+  {
+    "name": "Rhubarb",
+    "image": "assets/crops/rhubarb.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/6/6e/Rhubarb.png/50px-Rhubarb.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Everafter",
+    "growth": "3 h"
+  },
+  {
+    "name": "Barley",
+    "image": "assets/crops/barley.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/d/df/Barley.png/50px-Barley.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "The Bind",
+    "growth": "15 m"
+  },
+  {
+    "name": "Faerie Rye",
+    "image": "assets/crops/faerie_rye.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/9/9a/Faerie_Rye.png/50px-Faerie_Rye.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Everafter",
+    "growth": "1 h 15 m"
+  },
+  {
+    "name": "Oats",
+    "image": "assets/crops/oats.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/3/34/Oats.png/50px-Oats.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Everafter",
+    "growth": "2 h"
+  },
+  {
+    "name": "Chia Seeds",
+    "image": "assets/crops/chia_seeds.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/e/e4/Chia_Seeds.png/50px-Chia_Seeds.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "The Bind",
+    "growth": "n/a"
+  },
+  {
+    "name": "Black Pepper",
+    "image": "assets/crops/black_pepper.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/2/22/Black_Pepper.png/50px-Black_Pepper.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Mythopia",
+    "growth": "1 h 30 m"
+  },
+  {
+    "name": "Golden Pattypan",
+    "image": "assets/crops/golden_pattypan.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/4/4b/Golden_Pattypan.png/50px-Golden_Pattypan.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Drowsybloom Acre",
+    "growth": "20 m"
+  },
+  {
+    "name": "Parsnip",
+    "image": "assets/crops/parsnip.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/d/db/Parsnip.png/48px-Parsnip.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Drowsybloom Acre",
+    "growth": "5 m"
+  },
+  {
+    "name": "Pufflebud Pods",
+    "image": "assets/crops/pufflebud_pods.png",
+    "imageSource": "https://dreamlightvalleywiki.com/images/thumb/8/8d/Pufflebud_Pods.png/50px-Pufflebud_Pods.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "location": "Drowsybloom Acre",
+    "growth": "40 m"
+  },
+  {
+    "name": "Spring V-EGG-etable",
+    "image": "assets/crops/spring_v-egg-etable.png",
+    "source": "https://dreamlightvalleywiki.com/Ingredients",
+    "imageSource": "https://dreamlightvalleywiki.com/images/c/ce/Spring_V-EGG-etable.png",
+    "location": "Seasonal - Eggstravaganza",
+    "growth": "30 minutes"
+  },
+  {
+    "name": "Cotton",
+    "image": "assets/crops/cotton.png",
+    "source": "https://dreamlightvalleywiki.com/Cotton",
+    "imageSource": "https://dreamlightvalleywiki.com/images/c/c3/Cotton.png",
+    "location": "Sunlit Plateau - Crafting material",
+    "growth": "25 minutes"
+  }
+]
